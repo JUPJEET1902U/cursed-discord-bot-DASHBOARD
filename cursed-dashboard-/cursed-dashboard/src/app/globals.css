@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::selection {
+    @apply bg-violet/30 text-fog;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-void text-fog font-body antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+
+  /* Visible keyboard focus everywhere — accessibility floor */
+  :focus-visible {
+    outline: 2px solid theme("colors.violet.bright");
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Glassmorphism surface used across cards, nav, modals */
+  .glass {
+    @apply bg-ink/60 backdrop-blur-xl border border-white/[0.06] shadow-glass;
+  }
+
+  .glass-hover {
+    @apply transition-colors duration-200 hover:border-violet/40 hover:bg-ink/80;
+  }
+
+  .text-gradient-cursed {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-bright via-violet to-crimson;
+  }
+}
