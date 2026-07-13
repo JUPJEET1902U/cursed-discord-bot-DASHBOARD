@@ -1,54 +1,32 @@
 /**
- * Shapes for the `welcome` sub-document inside `guildConfigs` (see
- * `docs/ARCHITECTURE.md` → "MongoDB collections (contract with the bot)").
+ * Exact welcome fields read by the live bot's `utils/welcome.js` and
+ * `utils/serverConfig.js`.
  *
- * These are pure configuration — no message is ever sent from this repo.
- * The bot reads this exact shape from MongoDB on its own schedule and does
- * the actual sending. Field names/types here are the contract; coordinate
- * with the bot codebase before renaming anything.
+ * The dashboard API writes these same top-level fields into the `guildConfigs`
+ * MongoDB collection read by the bot's GuildConfigStore.
  *
- * Supported template variables (documented for the UI, substituted by the
- * bot — this dashboard never resolves them):
- *   {user}         → the new member's display name
- *   {mention}      → an @mention of the new member
- *   {server}       → the guild's name
- *   {membercount}  → the guild's member count after the join
+ * Enabled state is intentionally not stored as `enabled`: in the bot, welcome
+ * is enabled when `welcomeChannelId` is set and disabled when it is `null`.
  */
-
-export interface WelcomeEmbedConfig {
-  enabled: boolean;
-  title: string;
-  description: string;
-  /** Hex color, e.g. "#7C3AED". */
-  color: string;
-  thumbnail: boolean;
-  footer: string;
-  /** Empty string means "no image". */
-  imageUrl: string;
-}
-
 export interface WelcomeConfig {
-  enabled: boolean;
-  /** Discord channel snowflake, or null if never configured. */
-  channelId: string | null;
-  message: string;
-  mentionUser: boolean;
-  embed: WelcomeEmbedConfig;
+  welcomeChannelId: string | null;
+  welcomeMessage: string | null;
+  welcomeUseAI: boolean;
+  welcomeColor: string | null;
+  welcomeThumbnail: boolean;
+  welcomeImageUrl: string | null;
+  welcomeFooter: string | null;
 }
 
 export const DEFAULT_WELCOME_CONFIG: WelcomeConfig = {
-  enabled: false,
-  channelId: null,
-  message: "Welcome {mention} to **{server}**! Glad to have you here.",
-  mentionUser: true,
-  embed: {
-    enabled: true,
-    title: "Welcome to {server}! 👋",
-    description:
-      "Hey {user}, we're glad you're here.\nYou're member **#{membercount}**.",
-    color: "#7C3AED",
-    thumbnail: true,
-    footer: "Joined {server}",
-    imageUrl: "",
-  },
+  welcomeChannelId: null,
+  welcomeMessage: null,
+  welcomeUseAI: false,
+  welcomeColor: null,
+  welcomeThumbnail: true,
+  welcomeImageUrl: null,
+  welcomeFooter: null,
 };
+
+export const BOT_DEFAULT_WELCOME_MESSAGE =
+  "**Welcome to {server}, {user}!** We're glad you're here.";

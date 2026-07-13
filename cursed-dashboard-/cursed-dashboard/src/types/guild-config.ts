@@ -16,6 +16,15 @@ export interface GuildConfigDocument {
   guildId: string;
   updatedAt?: Date;
 
+  welcomeChannelId?: string | null;
+  welcomeMessage?: string | null;
+  welcomeUseAI?: boolean;
+  welcomeColor?: string | null;
+  welcomeThumbnail?: boolean;
+  welcomeImageUrl?: string | null;
+  welcomeFooter?: string | null;
+
+  /** Legacy dashboard-only nested draft. New Welcome saves remove this. */
   welcome?: WelcomeConfig;
   welcomeUpdatedBy?: string;
 

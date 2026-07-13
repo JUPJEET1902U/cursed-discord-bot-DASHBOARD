@@ -5,20 +5,43 @@ import { getGuildConfigsCollection } from "@/lib/db";
 import { fetchGuildChannels } from "@/lib/discord";
 import { welcomeConfigSchema } from "@/lib/validation/welcome";
 import { readJsonBody, zodErrorResponse } from "@/lib/api-route-helpers";
-import { DEFAULT_WELCOME_CONFIG } from "@/types/welcome";
+import { DEFAULT_WELCOME_CONFIG, type WelcomeConfig } from "@/types/welcome";
 import type { DiscordChannel } from "@/types/discord";
+import type { GuildConfigDocument } from "@/types/guild-config";
 
 interface RouteParams {
   params: Promise<{ guildId: string }>;
 }
 
+const WELCOME_PROJECTION = {
+  welcomeChannelId: 1,
+  welcomeMessage: 1,
+  welcomeUseAI: 1,
+  welcomeColor: 1,
+  welcomeThumbnail: 1,
+  welcomeImageUrl: 1,
+  welcomeFooter: 1,
+} as const;
+
+function fromDocument(doc: GuildConfigDocument | null): WelcomeConfig {
+  if (!doc) return DEFAULT_WELCOME_CONFIG;
+
+  return {
+    welcomeChannelId: doc.welcomeChannelId ?? null,
+    welcomeMessage: doc.welcomeMessage ?? null,
+    welcomeUseAI: doc.welcomeUseAI ?? false,
+    welcomeColor: doc.welcomeColor ?? null,
+    welcomeThumbnail: doc.welcomeThumbnail !== false,
+    welcomeImageUrl: doc.welcomeImageUrl ?? null,
+    welcomeFooter: doc.welcomeFooter ?? null,
+  };
+}
+
 /**
  * GET /api/guilds/[guildId]/welcome
  *
- * Returns the guild's current welcome config (or the documented defaults if
- * it has never been saved) plus a best-effort list of text channels for the
- * channel selector. This route only ever reads — no message is composed or
- * sent, and it never imports or calls into the bot process.
+ * Returns the same top-level MongoDB guild config fields read by the live
+ * bot's GuildConfigStore, plus a best-effort text-channel list.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { guildId } = await params;
@@ -35,13 +58,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const doc = await collection.findOne(
       { guildId },
-      { projection: { welcome: 1 } }
+      { projection: WELCOME_PROJECTION }
     );
 
     return NextResponse.json({
-      config: doc?.welcome ?? DEFAULT_WELCOME_CONFIG,
-      // null (not []) tells the UI "couldn't load channels, fall back to
-      // manual entry" — distinct from "this guild genuinely has none".
+      config: fromDocument(doc),
       channels: channels as DiscordChannel[] | null,
     });
   } catch (err) {
@@ -56,10 +77,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 /**
  * PUT /api/guilds/[guildId]/welcome
  *
- * Validates and persists the guild's welcome config. This is a pure config
- * write to MongoDB: it never sends a Discord message and never talks to the
- * bot process. The bot reads this same `guildConfigs` document on its own
- * schedule (see docs/ARCHITECTURE.md).
+ * Validates and persists only the exact top-level welcome fields read by the
+ * live bot's GuildConfigStore. This never sends Discord messages and never
+ * overwrites unrelated guild config fields.
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { guildId } = await params;
@@ -73,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return bodyResult.response;
   }
 
-  let config;
+  let config: WelcomeConfig;
   try {
     config = welcomeConfigSchema.parse(bodyResult.body);
   } catch (err) {
@@ -83,19 +103,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     throw err;
   }
 
-  // Extra guild-scoped validation: if we can see the guild's real channel
-  // list, make sure the chosen channel actually belongs to it and is a text
-  // channel. If the bot isn't in the guild yet (or the lookup fails), we
-  // can't do this check — the format-level regex in the schema still
-  // applies, and the bot will simply skip sending if the channel turns out
-  // to be invalid when it reads this config.
-  if (config.channelId) {
+  if (config.welcomeChannelId) {
     const channels = await fetchGuildChannels(guildId);
-    if (channels && !channels.some((c) => c.id === config.channelId)) {
+    if (channels && !channels.some((c) => c.id === config.welcomeChannelId)) {
       return NextResponse.json(
         {
           error: "That channel doesn't belong to this server.",
-          fieldErrors: { channelId: ["Select a channel from this server's list."] },
+          fieldErrors: {
+            welcomeChannelId: ["Select a channel from this server's list."],
+          },
         },
         { status: 422 }
       );
@@ -108,9 +124,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       { guildId },
       {
         $set: {
-          welcome: config,
+          welcomeChannelId: config.welcomeChannelId,
+          welcomeMessage: config.welcomeMessage,
+          welcomeUseAI: config.welcomeUseAI,
+          welcomeColor: config.welcomeColor,
+          welcomeThumbnail: config.welcomeThumbnail,
+          welcomeImageUrl: config.welcomeImageUrl,
+          welcomeFooter: config.welcomeFooter,
           updatedAt: new Date(),
-          welcomeUpdatedBy: access.userId,
+        },
+        $unset: {
+          // Remove the old dashboard-only nested draft shape if this guild had
+          // been saved before the bot moved to the shared flat Mongo contract.
+          welcome: "",
+          welcomeUpdatedBy: "",
         },
         $setOnInsert: { guildId },
       },
