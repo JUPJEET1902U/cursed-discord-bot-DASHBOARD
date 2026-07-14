@@ -28,3 +28,4 @@ npm run dev
 Next.js 15 (App Router) · React · TypeScript · Tailwind CSS · shadcn/ui ·
 Framer Motion · MongoDB · NextAuth (Discord OAuth2) · deployed on Vercel,
 talking to the bot's Railway-hosted status endpoint for live stats only.
+ 
