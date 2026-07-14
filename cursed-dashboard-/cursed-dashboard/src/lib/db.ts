@@ -1,5 +1,6 @@
 import "server-only";
 import { MongoClient, type Db, type Collection } from "mongodb";
+import { requireServerEnv } from "@/lib/env";
 import type { GuildConfigDocument } from "@/types/guild-config";
 import type { PremiumEntitlementDocument } from "@/types/premium";
 
@@ -24,19 +25,13 @@ import type { PremiumEntitlementDocument } from "@/types/premium";
  * lifetime.
  */
 declare global {
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
 let clientPromise: Promise<MongoClient> | undefined;
 
 function getClientPromise(): Promise<MongoClient> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    throw new Error(
-      "MONGODB_URI is not set — required to connect to the shared database."
-    );
-  }
+  const uri = requireServerEnv("MONGODB_URI");
 
   const isDev = process.env.NODE_ENV === "development";
   const cached = isDev ? global._mongoClientPromise : clientPromise;
@@ -66,12 +61,7 @@ function getClientPromise(): Promise<MongoClient> {
 }
 
 export async function getDb(): Promise<Db> {
-  const dbName = process.env.MONGODB_DB_NAME;
-  if (!dbName) {
-    throw new Error(
-      "MONGODB_DB_NAME is not set — required to select the shared database."
-    );
-  }
+  const dbName = requireServerEnv("MONGODB_DB_NAME");
   const client = await getClientPromise();
   return client.db(dbName);
 }

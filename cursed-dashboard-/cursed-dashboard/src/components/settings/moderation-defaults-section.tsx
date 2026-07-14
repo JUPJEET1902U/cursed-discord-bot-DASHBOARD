@@ -30,7 +30,7 @@ export function ModerationDefaultsSection({
   return (
     <DashboardCard
       title="Moderation Defaults"
-      description="Fallback values the bot's moderation commands use in this server."
+      description="Fallback values the bot&apos;s moderation commands use in this server."
     >
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-4">
@@ -39,7 +39,7 @@ export function ModerationDefaultsSection({
               Enable moderation features
             </Label>
             <p className="mt-0.5 text-xs text-ash">
-              Master switch for the bot's moderation commands.
+              Master switch for the bot&apos;s moderation commands.
             </p>
           </div>
           <Switch
@@ -76,7 +76,7 @@ export function ModerationDefaultsSection({
           <p className="mt-1.5 text-xs text-ash">
             Pre-filled duration when a moderator times someone out without
             specifying one. Slider covers up to 24h — type a longer value
-            below, up to Discord's 28-day maximum.
+            below, up to Discord&apos;s 28-day maximum.
           </p>
           <input
             type="number"
@@ -120,7 +120,7 @@ export function ModerationDefaultsSection({
             aria-valuetext={`${config.warningThreshold} warnings`}
           />
           <p className="mt-1.5 text-xs text-ash">
-            Number of warnings before the bot's escalation kicks in (e.g.
+            Number of warnings before the bot&apos;s escalation kicks in (e.g.
             automatic timeout).
           </p>
           {errors.warningThreshold ? (
