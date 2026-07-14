@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { CursedLogo } from "@/components/marketing/cursed-logo";
@@ -25,10 +26,10 @@ const ERROR_MESSAGES: Record<string, string> = {
  * a solid phishing setup. Rejects protocol-relative paths ("//evil.com")
  * too, since browsers treat those as absolute URLs.
  */
-function safeRedirectPath(path: string | undefined, fallback: string): string {
+function safeRedirectPath(path: string | undefined, fallback: Route): Route {
   if (!path) return fallback;
   if (!path.startsWith("/") || path.startsWith("//")) return fallback;
-  return path;
+  return path as Route;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
