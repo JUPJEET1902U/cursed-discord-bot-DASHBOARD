@@ -16,9 +16,7 @@ const timezoneSchema = z
   .string()
   .refine((tz) => VALID_TIMEZONES.has(tz), "Not a recognized timezone.");
 
-const languageSchema = z.enum(
-  SUPPORTED_LANGUAGES as [string, ...string[]]
-);
+const languageSchema = z.enum(SUPPORTED_LANGUAGES);
 
 const featureTogglesSchema = z.object({
   welcomeMessages: z.boolean(),

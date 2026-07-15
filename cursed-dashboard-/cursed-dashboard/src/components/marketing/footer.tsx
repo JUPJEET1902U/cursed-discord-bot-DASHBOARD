@@ -27,7 +27,7 @@ const columns = [
       { label: "GitHub", href: "https://github.com" },
     ],
   },
-];
+] as const;
 
 export function Footer() {
   return (
