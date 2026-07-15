@@ -12,10 +12,12 @@ import type { AIProvider } from "@/types/ai-settings";
  * and applies these as its defaults/fallbacks.
  */
 
-/** Only "en" exists today; the type is a union (not a bare `string`) so
- * adding a language later is a one-line change everywhere it's used. */
-export type SupportedLanguage = "en";
-export const SUPPORTED_LANGUAGES: SupportedLanguage[] = ["en"];
+/** Only "en" exists today; declared as a const tuple (not a bare `string[]`)
+ * so its literal member type flows through to `SupportedLanguage` and to
+ * `z.enum(SUPPORTED_LANGUAGES)` in validation — adding a language later is
+ * still a one-line change everywhere it's used. */
+export const SUPPORTED_LANGUAGES = ["en"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export interface FeatureToggles {
   welcomeMessages: boolean;

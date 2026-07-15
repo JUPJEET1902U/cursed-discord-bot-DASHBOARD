@@ -72,7 +72,7 @@ export function AutoroleEditor({
     return config.roleIds
       .map((id) => byId.get(id))
       .filter(
-        (r): r is DiscordRole => Boolean(r) && r.position >= botHighestRolePosition
+        (r): r is DiscordRole => r !== undefined && r.position >= botHighestRolePosition
       );
   }, [roles, botHighestRolePosition, config.roleIds]);
 

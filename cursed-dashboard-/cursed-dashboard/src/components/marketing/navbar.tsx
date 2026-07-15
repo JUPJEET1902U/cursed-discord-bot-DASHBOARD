@@ -9,7 +9,7 @@ const links = [
   { href: "#stats", label: "Servers" },
   { href: "#faq", label: "FAQ" },
   { href: "/docs", label: "Docs" },
-];
+] as const;
 
 export function Navbar() {
   return (
