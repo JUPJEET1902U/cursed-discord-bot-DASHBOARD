@@ -33,6 +33,7 @@ export const authConfig = {
       // to build the server-selection list). We deliberately do NOT request
       // `guilds.join`, `bot`, or any write-capable scope here.
       authorization: { params: { scope: "identify guilds" } },
+      checks: ["state"],
     }),
   ],
   session: {
