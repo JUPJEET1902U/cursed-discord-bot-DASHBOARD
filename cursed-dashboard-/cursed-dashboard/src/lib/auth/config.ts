@@ -25,6 +25,9 @@ export const authConfig = {
   // `getToken()` calls elsewhere (src/app/api/servers/route.ts) reference
   // that same env var, so this keeps both reading from one source of truth.
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
+  redirectProxyUrl:
+    "https://cursed-discord-bot-dashboard.vercel.app/api/auth",
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID,
@@ -33,7 +36,6 @@ export const authConfig = {
       // to build the server-selection list). We deliberately do NOT request
       // `guilds.join`, `bot`, or any write-capable scope here.
       authorization: { params: { scope: "identify guilds" } },
-      checks: ["state"],
     }),
   ],
   session: {
