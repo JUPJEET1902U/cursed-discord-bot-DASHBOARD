@@ -23,6 +23,19 @@ cp .env.example .env.local   # fill in Discord + MongoDB credentials
 npm run dev
 ```
 
+## OAuth deployment
+
+Set `DASHBOARD_URL` to the canonical dashboard origin. Do not define
+`AUTH_URL` or `NEXTAUTH_URL` on Vercel: Auth.js v5 must infer the incoming
+request host so `redirectProxyUrl` can safely proxy OAuth callbacks for
+generated and preview deployment hostnames.
+
+The Discord OAuth redirect must remain:
+
+```text
+https://cursed-discord-bot-dashboard.vercel.app/api/auth/callback/discord
+```
+
 ## Stack
 
 Next.js 15 (App Router) · React · TypeScript · Tailwind CSS · shadcn/ui ·

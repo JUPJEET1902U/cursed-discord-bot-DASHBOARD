@@ -1,7 +1,7 @@
 import "server-only";
 
 type ServerEnvKey =
-  | "NEXTAUTH_URL"
+  | "DASHBOARD_URL"
   | "NEXTAUTH_SECRET"
   | "DISCORD_CLIENT_ID"
   | "DISCORD_CLIENT_SECRET"
@@ -12,7 +12,7 @@ type ServerEnvKey =
   | "BOT_STATUS_API_KEY";
 
 export const REQUIRED_AUTH_ENV = [
-  "NEXTAUTH_URL",
+  "DASHBOARD_URL",
   "NEXTAUTH_SECRET",
   "DISCORD_CLIENT_ID",
   "DISCORD_CLIENT_SECRET",
