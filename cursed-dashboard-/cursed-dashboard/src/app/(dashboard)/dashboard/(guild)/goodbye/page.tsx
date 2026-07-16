@@ -7,9 +7,13 @@ export default function GoodbyePage() {
     <div>
       <PageHeader
         title="Goodbye"
-        description="Configure the message CURSED posts when someone leaves."
+        description="The live bot does not support goodbye messages yet."
       />
-      <ComingSoon icon={DoorOpen} feature="Goodbye messages" />
+      <ComingSoon
+        icon={DoorOpen}
+        feature="Goodbye messages"
+        note="No goodbye configuration exists in the live bot, so editing stays disabled."
+      />
     </div>
   );
 }

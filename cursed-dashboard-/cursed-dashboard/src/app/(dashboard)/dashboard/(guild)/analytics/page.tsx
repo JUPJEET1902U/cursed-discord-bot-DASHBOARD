@@ -7,9 +7,13 @@ export default function AnalyticsPage() {
     <div>
       <PageHeader
         title="Analytics"
-        description="Member growth, message activity, and command usage trends."
+        description="Historical trends from persisted bot metrics."
       />
-      <ComingSoon icon={BarChart3} feature="Analytics" />
+      <ComingSoon
+        icon={BarChart3}
+        feature="Analytics"
+        note="Not enough historical data is persisted yet. No charts or totals are fabricated."
+      />
     </div>
   );
 }
