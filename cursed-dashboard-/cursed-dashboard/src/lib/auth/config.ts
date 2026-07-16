@@ -26,8 +26,6 @@ export const authConfig = {
   // that same env var, so this keeps both reading from one source of truth.
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
-  redirectProxyUrl:
-    "https://cursed-discord-bot-dashboard.vercel.app/api/auth",
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID,
