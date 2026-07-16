@@ -18,10 +18,24 @@ import {
  * session object (see `src/lib/auth/config.ts`).
  */
 export async function GET(request: NextRequest) {
+  const sessionCookieName = "__Secure-authjs.session-token";
+  const hasSessionCookie = request.cookies
+    .getAll()
+    .some(
+      ({ name }) =>
+        name === sessionCookieName || name.startsWith(`${sessionCookieName}.`)
+    );
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: process.env.NODE_ENV === "production",
+  });
+
+  console.info("[auth-flow] servers", {
+    hasSessionCookie,
+    decodedJwt: Boolean(token),
+    tokenHasAccessToken: typeof token?.accessToken === "string",
+    tokenHasDiscordId: typeof token?.discordId === "string",
   });
 
   if (!token?.accessToken) {
