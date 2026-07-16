@@ -30,21 +30,15 @@ interface WelcomeEditorProps {
   guildId: string;
   guildName: string;
   initialConfig: WelcomeConfig;
-  initialChannels: DiscordChannel[] | null;
+  initialChannels: DiscordChannel[];
 }
 
 type FieldErrors = Partial<Record<keyof WelcomeConfig | "enabled", string>>;
 
 function disabledConfig(config: WelcomeConfig): WelcomeConfig {
   return {
-    ...config,
+    ...normalizeConfig(config),
     welcomeChannelId: null,
-    welcomeMessage: null,
-    welcomeUseAI: false,
-    welcomeColor: null,
-    welcomeThumbnail: true,
-    welcomeImageUrl: null,
-    welcomeFooter: null,
   };
 }
 
@@ -107,7 +101,7 @@ export function WelcomeEditor({
   initialChannels,
 }: WelcomeEditorProps) {
   const { toast } = useToast();
-  const [channels] = useState<DiscordChannel[] | null>(initialChannels);
+  const [channels] = useState<DiscordChannel[]>(initialChannels);
   const [savedConfig, setSavedConfig] = useState(() =>
     normalizeConfig(initialConfig)
   );
@@ -118,12 +112,14 @@ export function WelcomeEditor({
   const [enabled, setEnabled] = useState(Boolean(initialConfig.welcomeChannelId));
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [serverFieldErrors, setServerFieldErrors] = useState<FieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
 
   const dirty =
     enabled !== savedEnabled ||
     JSON.stringify(normalizeConfig(config)) !== JSON.stringify(savedConfig);
-  const errors = useMemo(() => validate(enabled, config), [enabled, config]);
+  const clientErrors = useMemo(() => validate(enabled, config), [enabled, config]);
+  const errors = { ...serverFieldErrors, ...clientErrors };
   const hasErrors = Object.values(errors).some(Boolean);
 
   useEffect(() => {
@@ -138,6 +134,7 @@ export function WelcomeEditor({
 
   const patch = useCallback((next: Partial<WelcomeConfig>) => {
     setConfig((prev) => normalizeConfig({ ...prev, ...next }));
+    setServerFieldErrors({});
     setSuccess(null);
   }, []);
 
@@ -145,6 +142,7 @@ export function WelcomeEditor({
     setConfig(savedConfig);
     setEnabled(savedEnabled);
     setServerError(null);
+    setServerFieldErrors({});
     setSuccess(null);
   }, [savedConfig, savedEnabled]);
 
@@ -161,6 +159,7 @@ export function WelcomeEditor({
     const payload = enabled ? normalizeConfig(config) : disabledConfig(config);
     setSaving(true);
     setServerError(null);
+    setServerFieldErrors({});
     setSuccess(null);
 
     try {
@@ -174,6 +173,13 @@ export function WelcomeEditor({
       if (!res.ok) {
         const message = data?.error ?? "Couldn't save welcome settings.";
         setServerError(message);
+        const nextFieldErrors: FieldErrors = {};
+        for (const [key, messages] of Object.entries(data?.fieldErrors ?? {})) {
+          if (Array.isArray(messages) && typeof messages[0] === "string") {
+            nextFieldErrors[key as keyof WelcomeConfig] = messages[0];
+          }
+        }
+        setServerFieldErrors(nextFieldErrors);
         toast({ title: "Save failed", description: message, variant: "error" });
         return;
       }
@@ -183,10 +189,10 @@ export function WelcomeEditor({
       setSavedConfig(nextConfig);
       setEnabled(Boolean(nextConfig.welcomeChannelId));
       setSavedEnabled(Boolean(nextConfig.welcomeChannelId));
-      setSuccess("Welcome settings saved. The live bot will pick it up after its next config refresh.");
+      setSuccess("Welcome settings are active in the live bot.");
       toast({
         title: "Welcome settings saved",
-        description: "Saved to the same MongoDB config read by the bot.",
+        description: "The live CURSED bot is using this configuration.",
         variant: "success",
       });
     } catch {
@@ -223,15 +229,14 @@ export function WelcomeEditor({
         <div className="space-y-6 lg:col-span-3">
           <DashboardCard
             title="Welcome"
-            description="Controls the bot fields stored as welcomeChannelId, welcomeMessage, welcomeUseAI, welcomeColor, welcomeThumbnail, welcomeImageUrl, and welcomeFooter."
+            description="Choose where CURSED greets new members."
           >
             <div className="space-y-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label htmlFor="welcome-enabled">Enable welcome messages</Label>
                   <p className="mt-0.5 text-xs text-ash">
-                    The live bot treats this as enabled when `welcomeChannelId`
-                    has a value.
+                    CURSED will greet new members in the selected channel.
                   </p>
                 </div>
                 <Switch
@@ -239,6 +244,7 @@ export function WelcomeEditor({
                   checked={enabled}
                   onCheckedChange={(checked) => {
                     setEnabled(checked);
+                    setServerFieldErrors({});
                     setSuccess(null);
                   }}
                 />
@@ -247,44 +253,27 @@ export function WelcomeEditor({
               <div>
                 <Label htmlFor="welcome-channel">Text channel</Label>
                 <div className="mt-1.5">
-                  {channels ? (
-                    <Select
-                      value={config.welcomeChannelId ?? undefined}
-                      onValueChange={(value) => patch({ welcomeChannelId: value })}
-                    >
-                      <SelectTrigger id="welcome-channel">
-                        <SelectValue placeholder="Select a channel..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {channels.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-ash">
-                            No text channels found.
-                          </div>
-                        ) : (
-                          channels.map((channel) => (
-                            <SelectItem key={channel.id} value={channel.id}>
-                              #{channel.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <>
-                      <Input
-                        id="welcome-channel"
-                        value={config.welcomeChannelId ?? ""}
-                        onChange={(e) =>
-                          patch({ welcomeChannelId: e.target.value || null })
-                        }
-                        placeholder="Channel ID, e.g. 123456789012345678"
-                      />
-                      <p className="mt-1.5 text-xs text-ash">
-                        Channel list unavailable. Enter a channel ID directly;
-                        the API still validates access and snowflake format.
-                      </p>
-                    </>
-                  )}
+                  <Select
+                    value={config.welcomeChannelId ?? undefined}
+                    onValueChange={(value) => patch({ welcomeChannelId: value })}
+                  >
+                    <SelectTrigger id="welcome-channel">
+                      <SelectValue placeholder="Select a channel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channels.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-ash">
+                          No channels CURSED can use.
+                        </div>
+                      ) : (
+                        channels.map((channel) => (
+                          <SelectItem key={channel.id} value={channel.id}>
+                            #{channel.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {errors.welcomeChannelId ? (
                   <p className="mt-1.5 text-xs text-crimson-bright">
@@ -295,8 +284,7 @@ export function WelcomeEditor({
 
               {!enabled ? (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ash">
-                  Empty state: saving while disabled clears the bot&apos;s welcome
-                  fields and leaves `welcomeChannelId` as null.
+                  Welcome messages are disabled. Your message and appearance settings are preserved.
                 </div>
               ) : null}
             </div>
@@ -304,7 +292,7 @@ export function WelcomeEditor({
 
           <DashboardCard
             title="Message"
-            description="Stored as welcomeMessage. Leave blank to use the bot's built-in default message."
+            description="Leave this blank to use CURSED's built-in welcome message."
           >
             <Textarea
               value={config.welcomeMessage ?? ""}
@@ -337,15 +325,14 @@ export function WelcomeEditor({
 
           <DashboardCard
             title="Bot embed options"
-            description="These are the options passed to the live bot's rich embed builder."
+            description="Customize the appearance of the welcome embed."
           >
             <div className="space-y-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <Label htmlFor="welcome-ai">Use AI welcome text</Label>
                   <p className="mt-0.5 text-xs text-ash">
-                    Stored as welcomeUseAI. The bot falls back to the custom or
-                    default message if AI fails.
+                    Falls back to your custom or default message if AI is unavailable.
                   </p>
                 </div>
                 <Switch

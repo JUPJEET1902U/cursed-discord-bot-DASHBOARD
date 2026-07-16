@@ -1,37 +1,42 @@
 import { redirect } from "next/navigation";
+import { ServerCrash } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { RetryButton } from "@/components/shared/retry-button";
 import { WelcomeEditor } from "@/components/welcome/welcome-editor";
-import { requireSelectedGuild } from "@/lib/guild";
 import { fetchInternal } from "@/lib/api";
-import { DEFAULT_WELCOME_CONFIG, type WelcomeConfig } from "@/types/welcome";
+import { requireSelectedGuild } from "@/lib/guild";
 import type { DiscordChannel } from "@/types/discord";
+import type { WelcomeConfig } from "@/types/welcome";
 
-/**
- * Server component: re-verifies the active guild (same guard the layout
- * already ran), then calls this app's own `GET /api/guilds/[guildId]/welcome`
- * — never MongoDB directly — to load the current config before handing off
- * to the client-side editor. This keeps "who's allowed to read this" logic
- * in exactly one place (the API route), matching every other data fetch in
- * this dashboard.
- */
 export default async function WelcomePage() {
   const guild = await requireSelectedGuild();
+  const response = await fetchInternal(`/api/guilds/${guild.id}/welcome`);
 
-  const res = await fetchInternal(`/api/guilds/${guild.id}/welcome`);
-
-  // The layout already verified this guild moments ago, so a 401/403 here
-  // would mean the session changed mid-request — safest to bounce back to
-  // server selection rather than show a broken page.
-  if (res.status === 401 || res.status === 403) {
-    redirect("/dashboard");
+  if (response.status === 401 || response.status === 403) redirect("/dashboard");
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as
+      | { code?: string; error?: string }
+      | null;
+    return (
+      <div>
+        <PageHeader
+          title="Welcome"
+          description="Configure the message CURSED posts when someone joins."
+        />
+        <EmptyState
+          icon={ServerCrash}
+          title={error?.code === "BOT_NOT_IN_GUILD" ? "CURSED is not added to this server" : "Welcome settings unavailable"}
+          description={error?.error ?? "The live bot API could not be reached."}
+          action={<RetryButton />}
+        />
+      </div>
+    );
   }
-  if (!res.ok) {
-    throw new Error("Couldn't load welcome settings.");
-  }
 
-  const data = (await res.json()) as {
+  const data = (await response.json()) as {
     config: WelcomeConfig;
-    channels: DiscordChannel[] | null;
+    channels: DiscordChannel[];
   };
 
   return (
@@ -43,7 +48,7 @@ export default async function WelcomePage() {
       <WelcomeEditor
         guildId={guild.id}
         guildName={guild.name}
-        initialConfig={data.config ?? DEFAULT_WELCOME_CONFIG}
+        initialConfig={data.config}
         initialChannels={data.channels}
       />
     </div>
