@@ -8,23 +8,23 @@ import { cn } from "@/lib/utils";
 const faqs = [
   {
     q: "Does the dashboard control the bot directly?",
-    a: "No. The dashboard only writes to a shared MongoDB database through its own API. The bot reads its configuration from that same database on its own schedule — the two run as fully separate processes.",
+    a: "The dashboard calls an authenticated API in the running bot. That API validates live Discord state and updates the same MongoDB guild document the bot reads.",
   },
   {
     q: "What permission do I need to access a server's dashboard?",
     a: "You need the Manage Server permission on that Discord server. We check this against Discord's OAuth2 scopes every time you sign in, not just once.",
   },
   {
-    q: "Can I switch AI personalities per channel?",
-    a: "Yes. AI Settings lets you enable AI per channel and assign one of eight personalities, plus tune memory, temperature, and max response length independently.",
+    q: "Which settings are available now?",
+    a: "Welcome and Autorole are production-connected. Other settings pages clearly show that they are unavailable until the bot exposes a compatible API and storage contract.",
   },
   {
-    q: "What happens if I disable a feature — does old data get deleted?",
-    a: "No. Disabling a feature (like Welcome or AutoMod) only flips its enabled flag. Your configuration — embed text, channel selection, filters — stays saved for whenever you turn it back on.",
+    q: "What happens when I disable Welcome?",
+    a: "The selected welcome channel is cleared, which disables delivery. The supported message and appearance fields remain available for the next time Welcome is enabled.",
   },
   {
-    q: "Is there a free tier?",
-    a: "Yes, the core moderation, welcome/goodbye, autorole, and logging systems are free. Premium adds extra AI capacity and upcoming features listed on the Premium page.",
+    q: "How quickly does the bot see a saved change?",
+    a: "The bot refreshes cached guild configuration on a five-second interval by default. Deployments can tune that interval with GUILD_CONFIG_REFRESH_MS.",
   },
 ];
 

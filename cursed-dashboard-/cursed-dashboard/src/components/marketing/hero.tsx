@@ -30,7 +30,7 @@ export function Hero() {
           className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs text-ash mb-6"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-violet-bright animate-pulse-glow" />
-          Now running on 12,000+ servers
+          Live dashboard controls for CURSED
         </motion.div>
 
         <motion.h1
@@ -49,8 +49,8 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.25 }}
           className="mt-6 text-lg text-ash max-w-2xl mx-auto"
         >
-          Moderation, AI personalities, welcome flows, and full server analytics —
-          configured from one dashboard your bot reads from in real time.
+          Manage Welcome and Autorole settings through permission-checked controls
+          connected directly to the configuration your bot reads.
         </motion.p>
 
         <motion.div
