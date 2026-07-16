@@ -9,7 +9,9 @@ type ServerEnvKey =
   | "MONGODB_URI"
   | "MONGODB_DB_NAME"
   | "BOT_STATUS_API_URL"
-  | "BOT_STATUS_API_KEY";
+  | "BOT_STATUS_API_KEY"
+  | "BOT_API_URL"
+  | "DASHBOARD_API_SECRET";
 
 export const REQUIRED_AUTH_ENV = [
   "DASHBOARD_URL",
@@ -24,6 +26,8 @@ export const OPTIONAL_SERVER_ENV = [
   "MONGODB_DB_NAME",
   "BOT_STATUS_API_URL",
   "BOT_STATUS_API_KEY",
+  "BOT_API_URL",
+  "DASHBOARD_API_SECRET",
 ] as const satisfies readonly ServerEnvKey[];
 
 export function getOptionalServerEnv(key: ServerEnvKey): string | undefined {

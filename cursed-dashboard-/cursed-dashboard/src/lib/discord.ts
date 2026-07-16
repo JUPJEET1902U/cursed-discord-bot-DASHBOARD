@@ -91,11 +91,12 @@ export class DiscordAuthError extends Error {}
  * yet, click to invite" rather than failing outright.
  */
 export function toManageableGuilds(
-  guilds: DiscordPartialGuild[]
+  guilds: DiscordPartialGuild[],
+  botGuildIds: Set<string> | null
 ): ManageableGuild[] {
   return guilds.map((guild) => ({
     ...guild,
-    botIsMember: false, // TODO: replace with real lookup once DB reads land
+    botIsMember: botGuildIds ? botGuildIds.has(guild.id) : null,
     iconUrl: guildIconUrl(guild.id, guild.icon),
   }));
 }

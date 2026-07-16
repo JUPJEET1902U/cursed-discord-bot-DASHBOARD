@@ -20,7 +20,7 @@ export interface DiscordPartialGuild {
 /** A guild the user can manage, enriched with whether the bot is present. */
 export interface ManageableGuild extends DiscordPartialGuild {
   /** Populated by /api/servers once it cross-references the bot's guild list. */
-  botIsMember: boolean;
+  botIsMember: boolean | null;
   iconUrl: string | null;
 }
 
