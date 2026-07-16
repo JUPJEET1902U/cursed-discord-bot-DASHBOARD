@@ -2,50 +2,50 @@
 
 import { motion } from "framer-motion";
 import {
-  ShieldCheck,
-  Sparkles,
+  Activity,
+  Bot,
   DoorOpen,
+  LockKeyhole,
+  RefreshCw,
   UserCog,
-  ScrollText,
-  BarChart3,
 } from "lucide-react";
 
 const features = [
   {
-    icon: ShieldCheck,
-    title: "Moderation & AutoMod",
+    icon: Activity,
+    title: "Live server overview",
     description:
-      "Anti-spam, anti-invite, caps and mention filters with configurable warn / timeout / kick / ban escalation.",
-  },
-  {
-    icon: Sparkles,
-    title: "8 AI personalities",
-    description:
-      "From Friendly to Chaos to Pirate — pick a personality per channel, tune temperature, memory, and response length.",
+      "See bot presence, latency, uptime, member and boost counts, provider availability, and recorded command activity.",
   },
   {
     icon: DoorOpen,
-    title: "Welcome & goodbye flows",
+    title: "Welcome controls",
     description:
-      "Embed builder with live preview and placeholders like {user}, {mention}, {server}, {membercount}.",
+      "Choose a usable channel, edit every bot-supported Welcome field, preview placeholders, and save directly to guild config.",
   },
   {
     icon: UserCog,
-    title: "Smart autorole",
+    title: "Safe autorole",
     description:
-      "Delay, bot-ignore, human-only, and role-hierarchy validation baked in — no accidental permission escalation.",
+      "Select one role the bot can assign, with managed-role and Discord hierarchy restrictions enforced by the live bot.",
   },
   {
-    icon: ScrollText,
-    title: "Full audit logging",
+    icon: LockKeyhole,
+    title: "Permission checked",
     description:
-      "Member, message, voice, role, channel, and moderation logs routed to whichever channels you choose.",
+      "Discord sign-in and Manage Server permission are verified before any guild data is read or changed.",
   },
   {
-    icon: BarChart3,
-    title: "Server analytics",
+    icon: RefreshCw,
+    title: "Shared configuration",
     description:
-      "Commands used, AI requests, member growth, and moderation actions — charted, not buried in a CSV.",
+      "Dashboard updates use the same MongoDB guild document as CURSED, with backward-compatible JSON migration in the bot.",
+  },
+  {
+    icon: Bot,
+    title: "Honest feature status",
+    description:
+      "Pages without a production storage contract are clearly marked unavailable until the bot exposes a compatible API.",
   },
 ];
 
@@ -55,11 +55,11 @@ export function Features() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-fog">
-            Everything your server needs
+            Production-connected controls
           </h2>
           <p className="mt-4 text-ash">
-            Six systems, one dashboard. Every change here is written straight to
-            the config your bot already reads.
+            The controls shown as available use live Discord state and the same
+            guild configuration CURSED reads in production.
           </p>
         </div>
 

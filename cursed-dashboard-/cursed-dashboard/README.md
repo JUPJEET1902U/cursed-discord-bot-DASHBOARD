@@ -1,44 +1,82 @@
 # CURSED Dashboard
 
-Standalone Next.js 15 dashboard for the CURSED Discord bot. See `docs/ARCHITECTURE.md`
-for how this repo stays fully decoupled from the bot (communicates only via
-REST API → MongoDB).
+Next.js 15 control panel for the CURSED Discord bot. Authenticated dashboard
+routes verify the user's Discord `Manage Guild` permission, then call the live
+Railway bot API with a server-only shared secret. The browser never receives a
+Discord access token, bot token, MongoDB URI, or API secret.
 
-## Status
+## Live features
 
-Built incrementally per spec:
+- Discord OAuth and manageable-server selection
+- Live bot, MongoDB, guild, AI-provider, and tracked-command status
+- Welcome configuration using the bot's exact seven flat config fields
+- Single-role Autorole configuration with live hierarchy checks
+- Honest unavailable states for features the bot does not persist or support
 
-- [x] 1. Folder structure
-- [x] 2. Architecture (`docs/ARCHITECTURE.md`)
-- [x] 3. Landing page (`src/app/(marketing)/page.tsx` + `src/components/marketing/*`)
-- [x] 4. Discord OAuth2 authentication (`src/lib/auth/*`, `src/middleware.ts`, `(auth)/login`, `(dashboard)/dashboard`)
-- [x] 5. Dashboard shell + guild context (`src/lib/guild.ts`, `(guild)/layout.tsx`, `src/components/dashboard/*`)
-- [ ] 6. Feature pages (Welcome, Goodbye, Autorole, AI Settings, Moderation, Logs, Settings, Analytics, Premium)
-
-## Getting started
+## Local development
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in Discord + MongoDB credentials
+copy .env.example .env.local
 npm run dev
 ```
 
-## OAuth deployment
+Set `BOT_API_URL` to a running bot origin. `DASHBOARD_API_SECRET` must be the
+same non-empty random value in the dashboard and bot environments.
 
-Set `DASHBOARD_URL` to the canonical dashboard origin. Do not define
-`AUTH_URL` or `NEXTAUTH_URL` on Vercel: Auth.js v5 must infer the incoming
-request host so `redirectProxyUrl` can safely proxy OAuth callbacks for
-generated and preview deployment hostnames.
+## Vercel
 
-The Discord OAuth redirect must remain:
+Import `JUPJEET1902U/cursed-discord-bot-DASHBOARD` with:
+
+- Framework Preset: `Next.js`
+- Root Directory: `cursed-dashboard-/cursed-dashboard`
+- Install Command: `npm install`
+- Build Command: `npm run build`
+- Output Directory: leave blank
+- Node.js: 20 or newer
+
+Required Production environment variables:
+
+```text
+DASHBOARD_URL=https://cursed-discord-bot-dashboard.vercel.app
+NEXTAUTH_SECRET=<random secret>
+DISCORD_CLIENT_ID=<Discord application ID>
+DISCORD_CLIENT_SECRET=<Discord OAuth client secret>
+BOT_API_URL=https://<railway-service-domain>
+DASHBOARD_API_SECRET=<same value configured on Railway>
+```
+
+Do not define `AUTH_URL`, `NEXTAUTH_URL`, `DISCORD_BOT_TOKEN`, `MONGO_URI`, or
+`MONGODB_URI` in Vercel. They are not used by this dashboard architecture.
+
+The Discord Developer Portal OAuth redirect URI is:
 
 ```text
 https://cursed-discord-bot-dashboard.vercel.app/api/auth/callback/discord
 ```
 
-## Stack
+## Railway
 
-Next.js 15 (App Router) · React · TypeScript · Tailwind CSS · shadcn/ui ·
-Framer Motion · MongoDB · NextAuth (Discord OAuth2) · deployed on Vercel,
-talking to the bot's Railway-hosted status endpoint for live stats only.
- 
+The bot keeps the existing `node index.js` start command and `/health` check.
+Add these variables to the same service:
+
+```text
+BOT_TOKEN=<Discord bot token>
+MONGO_URI=<MongoDB URI including the database name>
+DASHBOARD_API_SECRET=<same value configured on Vercel>
+DASHBOARD_URL=https://cursed-discord-bot-dashboard.vercel.app
+GUILD_CONFIG_REFRESH_MS=5000
+GUILD_CONFIG_MIRROR_JSON=true
+```
+
+`DASHBOARD_URL` restricts browser-origin requests. Normal Vercel-to-Railway
+requests are server-to-server and authenticated with `DASHBOARD_API_SECRET`.
+
+## Validation
+
+```bash
+npm run type-check
+npm run build
+```
+
+See `docs/ARCHITECTURE.md` for the request flow and supported config contract.

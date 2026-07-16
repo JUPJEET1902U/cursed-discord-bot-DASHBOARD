@@ -9,7 +9,11 @@ export default function PremiumPage() {
         title="Premium"
         description="Upgrade this server for higher limits and extra features."
       />
-      <ComingSoon icon={Crown} feature="Premium" />
+      <ComingSoon
+        icon={Crown}
+        feature="Premium"
+        note="Premium status is managed by the live bot and payment webhooks; dashboard controls are not available yet."
+      />
     </div>
   );
 }

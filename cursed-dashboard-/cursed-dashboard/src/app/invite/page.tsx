@@ -1,22 +1,22 @@
-import Link from "next/link";
+import type { Route } from "next";
+import { redirect } from "next/navigation";
+import { requireServerEnv } from "@/lib/env";
 
-export const metadata = {
-  title: "Invite — CURSED",
-};
+interface InvitePageProps {
+  searchParams: Promise<{ guildId?: string }>;
+}
 
-/**
- * Minimal placeholder — this route is linked from the marketing pages but
- * doesn't have real content yet. Exists so the link is a valid typedRoutes
- * destination instead of a dead link.
- */
-export default function InvitePage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="font-display text-3xl font-semibold text-fog">Invite</h1>
-      <p className="text-sm text-ash">Coming soon.</p>
-      <Link href="/" className="text-sm text-violet-bright hover:underline">
-        Back to home
-      </Link>
-    </main>
-  );
+const BOT_PERMISSIONS = "1099783597126";
+
+export default async function InvitePage({ searchParams }: InvitePageProps) {
+  const { guildId } = await searchParams;
+  const url = new URL("https://discord.com/oauth2/authorize");
+  url.searchParams.set("client_id", requireServerEnv("DISCORD_CLIENT_ID"));
+  url.searchParams.set("scope", "bot applications.commands");
+  url.searchParams.set("permissions", BOT_PERMISSIONS);
+  if (/^\d{17,20}$/.test(guildId ?? "")) {
+    url.searchParams.set("guild_id", guildId as string);
+    url.searchParams.set("disable_guild_select", "true");
+  }
+  redirect(url.toString() as Route);
 }

@@ -25,12 +25,7 @@ const GLOW_CLASSES: Record<NonNullable<StatCardProps["glow"]>, string> = {
   none: "bg-white/[0.06] text-ash",
 };
 
-/**
- * A single metric tile: icon, label, big value, optional status hint. Used
- * for Bot Status, Ping, Member Count, etc. on the Overview page — every
- * value here is currently mock data (see `(guild)/overview/page.tsx`);
- * nothing here calls the bot or a database.
- */
+/** A single metric tile with an icon, value, and optional status hint. */
 export function StatCard({
   icon: Icon,
   label,
@@ -57,7 +52,7 @@ export function StatCard({
         ) : null}
       </div>
       <p className="mt-3 text-xs text-ash">{label}</p>
-      <p className="mt-1 font-display text-2xl font-semibold text-fog">
+      <p className="mt-1 break-words font-display text-2xl font-semibold text-fog">
         {value}
       </p>
     </div>

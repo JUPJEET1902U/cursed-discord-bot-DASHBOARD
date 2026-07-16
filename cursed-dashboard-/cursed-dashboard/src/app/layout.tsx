@@ -25,14 +25,14 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CURSED — The Ultimate AI Discord Bot",
+  title: "CURSED - Discord Bot Dashboard",
   description:
-    "Moderation, AI personalities, welcome flows and analytics for your Discord server — all from one dashboard.",
-  metadataBase: new URL("https://cursedbot.app"),
+    "Permission-checked Welcome and Autorole controls connected to the live CURSED Discord bot.",
+  metadataBase: new URL("https://cursed-discord-bot-dashboard.vercel.app"),
   openGraph: {
-    title: "CURSED — The Ultimate AI Discord Bot",
+    title: "CURSED - Discord Bot Dashboard",
     description:
-      "Moderation, AI personalities, welcome flows and analytics for your Discord server.",
+      "Permission-checked Welcome and Autorole controls connected to the live CURSED Discord bot.",
     type: "website",
   },
 };

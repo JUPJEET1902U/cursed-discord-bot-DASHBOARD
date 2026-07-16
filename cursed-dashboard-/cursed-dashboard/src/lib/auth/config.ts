@@ -46,14 +46,6 @@ export const authConfig = {
   },
   callbacks: {
     async jwt({ token, account, profile }) {
-      const initialSignIn = Boolean(account);
-      console.info("[auth-flow] jwt", {
-        initialSignIn,
-        hasProfile: Boolean(profile),
-        accountHasAccessToken: typeof account?.access_token === "string",
-        tokenHasAccessTokenBefore: typeof token.accessToken === "string",
-      });
-
       // Only runs on initial sign-in, when `account`/`profile` are populated.
       if (account && profile) {
         token.accessToken = account.access_token;
@@ -63,19 +55,9 @@ export const authConfig = {
         token.discordId = profile.id as string;
       }
 
-      console.info("[auth-flow] jwt-result", {
-        initialSignIn,
-        tokenHasAccessToken: typeof token.accessToken === "string",
-        tokenHasDiscordId: typeof token.discordId === "string",
-      });
       return token;
     },
     async session({ session, token }) {
-      console.info("[auth-flow] session", {
-        tokenHasAccessToken: typeof token.accessToken === "string",
-        tokenHasDiscordId: typeof token.discordId === "string",
-      });
-
       // Whitelist only what the client actually needs to render UI.
       // token.accessToken is intentionally NOT copied here.
       if (session.user) {

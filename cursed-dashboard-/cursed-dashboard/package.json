@@ -2,7 +2,7 @@
   "name": "cursed-dashboard",
   "version": "0.1.0",
   "private": true,
-  "description": "Web dashboard for the CURSED Discord bot. Talks to the bot only via REST API + MongoDB — never touches the bot process directly.",
+  "description": "Web dashboard for the CURSED Discord bot, connected through a secure server-to-server Railway API.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,7 +15,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "framer-motion": "^11.15.0",
-    "mongodb": "^6.12.0",
     "next-auth": "^5.0.0-beta.25",
     "zod": "^3.24.1",
     "clsx": "^2.1.1",

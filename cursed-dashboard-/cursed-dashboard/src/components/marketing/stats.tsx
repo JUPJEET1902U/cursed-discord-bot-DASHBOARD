@@ -3,10 +3,10 @@
 import { motion } from "framer-motion";
 
 const stats = [
-  { value: "12,400+", label: "Servers protected" },
-  { value: "2.1M", label: "Members reached" },
-  { value: "38ms", label: "Median command latency" },
-  { value: "99.95%", label: "Uptime, last 90 days" },
+  { value: "Live", label: "Bot presence and status" },
+  { value: "Exact", label: "Bot-compatible config fields" },
+  { value: "5 sec", label: "Default config refresh" },
+  { value: "Private", label: "Server-side credentials" },
 ];
 
 export function Stats() {

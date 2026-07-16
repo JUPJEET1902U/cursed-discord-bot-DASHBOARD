@@ -1,98 +1,137 @@
+import { redirect } from "next/navigation";
 import {
   Bot,
-  Database,
-  Sparkles,
-  Radio,
   Clock,
-  Users,
+  Database,
+  Radio,
+  ServerCrash,
+  Sparkles,
   Terminal,
-  UserPlus,
-  ShieldAlert,
-  Settings2,
+  Users,
+  Zap,
 } from "lucide-react";
-import { PageHeader } from "@/components/dashboard/page-header";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { SelectedServerCard } from "@/components/dashboard/selected-server-card";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { SelectedServerCard } from "@/components/dashboard/selected-server-card";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { EmptyState } from "@/components/shared/empty-state";
+import { RetryButton } from "@/components/shared/retry-button";
+import { fetchInternal } from "@/lib/api";
+import { requireSelectedGuild } from "@/lib/guild";
+import type { BotOverviewData } from "@/types/bot-api";
 
-/**
- * All values on this page are mock data — nothing here calls the bot
- * process or reads MongoDB (both are explicitly out of scope for this
- * step). Once the bot-status API and DB reads exist, swap these constants
- * for real fetches; the StatCard/DashboardCard layout doesn't need to
- * change.
- */
-const MOCK_ACTIVITY = [
-  { icon: UserPlus, text: "3 new members joined", time: "12m ago" },
-  { icon: ShieldAlert, text: "Auto-mod flagged a message in #general", time: "38m ago" },
-  { icon: Settings2, text: "Welcome message template updated", time: "2h ago" },
-  { icon: Terminal, text: "/ban used by a moderator", time: "5h ago" },
-];
+function formatDuration(milliseconds: number | null): string {
+  if (milliseconds === null) return "Not available";
+  const totalMinutes = Math.floor(milliseconds / 60_000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
 
-export default function OverviewPage() {
+function providerLabel(providers: BotOverviewData["aiProviders"]): string {
+  const available = [
+    providers.gemini ? "Gemini" : null,
+    providers.groq ? "Groq" : null,
+    providers.openRouter ? "OpenRouter" : null,
+  ].filter((provider): provider is string => Boolean(provider));
+  return available.length > 0 ? available.join(", ") : "Not configured";
+}
+
+export default async function OverviewPage() {
+  const guild = await requireSelectedGuild();
+  const response = await fetchInternal(`/api/guilds/${guild.id}/overview`);
+
+  if (response.status === 401 || response.status === 403) redirect("/dashboard");
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as
+      | { code?: string; error?: string }
+      | null;
+    const botMissing = error?.code === "BOT_NOT_IN_GUILD";
+    return (
+      <div>
+        <PageHeader
+          title="Overview"
+          description="Live bot status and activity for this server."
+        />
+        <EmptyState
+          icon={ServerCrash}
+          title={botMissing ? "CURSED is not added to this server" : "Live data unavailable"}
+          description={error?.error ?? "The Railway bot API could not be reached."}
+          action={<RetryButton />}
+        />
+      </div>
+    );
+  }
+
+  const { data } = (await response.json()) as { data: BotOverviewData };
+  const activity = data.activity;
+
   return (
     <div>
       <PageHeader
         title="Overview"
-        description="A snapshot of this server's bot status and activity."
+        description="Live bot status and activity for this server."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Bot}
           label="Bot status"
-          value="Online"
-          hint="Mock"
-          tone="positive"
-          glow="violet"
+          value={data.bot.ready ? "Online" : "Offline"}
+          hint={data.bot.presence ?? "Gateway"}
+          tone={data.bot.ready ? "positive" : "negative"}
         />
         <StatCard
           icon={Database}
           label="Database status"
-          value="Connected"
-          hint="Mock"
-          tone="positive"
-          glow="violet"
+          value={data.mongo.connected ? "Connected" : "Unavailable"}
+          hint={data.mongo.state}
+          tone={data.mongo.connected ? "positive" : "negative"}
         />
         <SelectedServerCard />
         <StatCard
           icon={Sparkles}
-          label="AI provider"
-          value="Not configured"
-          hint="Mock"
+          label="AI providers"
+          value={providerLabel(data.aiProviders)}
+          hint="Availability only"
           tone="neutral"
           glow="crimson"
         />
         <StatCard
           icon={Radio}
-          label="Ping"
-          value="42ms"
-          hint="Mock"
-          tone="positive"
-          glow="violet"
+          label="WebSocket ping"
+          value={data.bot.pingMs === null ? "Not available" : `${Math.round(data.bot.pingMs)}ms`}
+          tone={data.bot.pingMs === null ? "warning" : "positive"}
         />
         <StatCard
           icon={Clock}
-          label="Uptime"
-          value="99.98%"
-          hint="Mock · 30d"
+          label="Bot uptime"
+          value={formatDuration(data.bot.uptimeMs)}
+          hint="Current process"
           tone="positive"
-          glow="violet"
         />
         <StatCard
           icon={Users}
           label="Member count"
-          value="1,284"
-          hint="Mock"
-          tone="neutral"
+          value={data.guild.memberCount.toLocaleString()}
+          hint="Live guild cache"
           glow="crimson"
         />
         <StatCard
           icon={Terminal}
-          label="Commands used today"
-          value="317"
-          hint="Mock"
-          tone="neutral"
+          label="Commands tracked"
+          value={activity.available ? activity.totalCommands.toLocaleString() : "Not available"}
+          hint={activity.available ? "Since tracking began" : "MongoDB unavailable"}
+          glow="crimson"
+        />
+        <StatCard
+          icon={Zap}
+          label="Server boosts"
+          value={data.guild.boostCount?.toLocaleString() ?? "Not available"}
+          hint="Live guild cache"
           glow="crimson"
         />
       </div>
@@ -100,22 +139,9 @@ export default function OverviewPage() {
       <div className="mt-6">
         <DashboardCard
           title="Recent activity"
-          description="Mock data — live activity lands once the bot integration ships."
+          description="Detailed event history is not persisted by the live bot yet."
         >
-          <ul className="divide-y divide-white/[0.06]">
-            {MOCK_ACTIVITY.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-ash">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <span className="flex-1 text-sm text-fog">{item.text}</span>
-                  <span className="text-xs text-ash">{item.time}</span>
-                </li>
-              );
-            })}
-          </ul>
+          <p className="py-4 text-sm text-ash">No activity data available yet.</p>
         </DashboardCard>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { getBotGuildPresence } from "@/lib/bot-api";
 import {
   DiscordAuthError,
   fetchUserGuilds,
@@ -7,35 +8,12 @@ import {
   toManageableGuilds,
 } from "@/lib/discord";
 
-/**
- * GET /api/servers
- *
- * Returns the guilds the signed-in user has MANAGE_GUILD on. Used by the
- * server-selection page after login.
- *
- * Reads the Discord access token straight off the encrypted session JWT via
- * `getToken()` — this is server-only and never touches the client-visible
- * session object (see `src/lib/auth/config.ts`).
- */
+/** Returns manageable Discord guilds enriched with live bot membership. */
 export async function GET(request: NextRequest) {
-  const sessionCookieName = "__Secure-authjs.session-token";
-  const hasSessionCookie = request.cookies
-    .getAll()
-    .some(
-      ({ name }) =>
-        name === sessionCookieName || name.startsWith(`${sessionCookieName}.`)
-    );
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: process.env.NODE_ENV === "production",
-  });
-
-  console.info("[auth-flow] servers", {
-    hasSessionCookie,
-    decodedJwt: Boolean(token),
-    tokenHasAccessToken: typeof token?.accessToken === "string",
-    tokenHasDiscordId: typeof token?.discordId === "string",
   });
 
   if (!token?.accessToken) {
@@ -45,20 +23,32 @@ export async function GET(request: NextRequest) {
   try {
     const allGuilds = await fetchUserGuilds(token.accessToken);
     const manageable = filterManageableGuilds(allGuilds);
+    let botGuildIds: Set<string> | null = null;
 
-    // NOTE: no DB writes yet per this step's spec. Once `src/lib/db` exists,
-    // this is where we'd upsert the `users` collection's cached guild list
-    // (docs/ARCHITECTURE.md → "users — cached Discord profile + which
-    // guilds they manage, refreshed on login").
-    return NextResponse.json({ guilds: toManageableGuilds(manageable) });
-  } catch (err) {
-    if (err instanceof DiscordAuthError) {
+    try {
+      botGuildIds = await getBotGuildPresence(
+        manageable.map((guild) => guild.id)
+      );
+    } catch (error) {
+      console.warn("[GET /api/servers] bot presence unavailable", {
+        error: error instanceof Error ? error.name : "UnknownError",
+      });
+    }
+
+    return NextResponse.json({
+      guilds: toManageableGuilds(manageable, botGuildIds),
+      botStatusAvailable: botGuildIds !== null,
+    });
+  } catch (error) {
+    if (error instanceof DiscordAuthError) {
       return NextResponse.json(
         { error: "Discord session expired. Please sign in again." },
         { status: 401 }
       );
     }
-    console.error("[GET /api/servers]", err);
+    console.error("[GET /api/servers]", {
+      error: error instanceof Error ? error.name : "UnknownError",
+    });
     return NextResponse.json(
       { error: "Couldn't reach Discord. Try again in a moment." },
       { status: 502 }
