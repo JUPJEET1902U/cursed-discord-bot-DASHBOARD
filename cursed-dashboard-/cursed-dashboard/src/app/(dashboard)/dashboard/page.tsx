@@ -10,13 +10,15 @@ import { SELECTED_GUILD_COOKIE } from "@/lib/guild";
 import type { ManageableGuild } from "@/types/discord";
 
 interface DashboardPageProps {
-  searchParams: Promise<{ selected?: string; error?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
 const ERROR_COPY: Record<string, string> = {
   invalid_selection: "That selection didn't go through. Try again.",
   fetch_failed: "Couldn't reach Discord to verify that server. Try again.",
   access_denied: "You don't have Manage Server on that server anymore.",
+  bot_not_added: "Add CURSED to that server before opening its dashboard.",
+  bot_unavailable: "The live bot is temporarily unavailable. Try again shortly.",
 };
 
 export default async function DashboardPage({
@@ -49,7 +51,10 @@ export default async function DashboardPage({
     );
   }
 
-  const { guilds } = (await res.json()) as { guilds: ManageableGuild[] };
+  const { guilds, botStatusAvailable } = (await res.json()) as {
+    guilds: ManageableGuild[];
+    botStatusAvailable: boolean;
+  };
 
   // Graceful handling of "lost access": if a guild is selected in the
   // cookie but no longer appears in the freshly-fetched manageable list
@@ -87,6 +92,12 @@ export default async function DashboardPage({
         {error ? (
           <div className="mb-6 rounded-xl border border-crimson/30 bg-crimson/[0.08] px-4 py-3 text-sm text-crimson-bright">
             {ERROR_COPY[error] ?? "Something went wrong. Try again."}
+          </div>
+        ) : null}
+
+        {!botStatusAvailable ? (
+          <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-400/[0.08] px-4 py-3 text-sm text-amber-200">
+            Live bot status is unavailable. Server selection will return when the Railway API reconnects.
           </div>
         ) : null}
 

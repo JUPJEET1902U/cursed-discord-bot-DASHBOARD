@@ -32,6 +32,9 @@ export async function botApiRequest<T>(
   init: Omit<RequestInit, "headers"> & { headers?: HeadersInit } = {}
 ): Promise<T> {
   const secret = requireServerEnv("DASHBOARD_API_SECRET");
+  const headers = new Headers(init.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  headers.set("Authorization", `Bearer ${secret}`);
   let response: Response;
 
   try {
@@ -39,11 +42,7 @@ export async function botApiRequest<T>(
       ...init,
       cache: "no-store",
       signal: init.signal ?? AbortSignal.timeout(10_000),
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${secret}`,
-        ...init.headers,
-      },
+      headers,
     });
   } catch {
     throw new BotApiError(
