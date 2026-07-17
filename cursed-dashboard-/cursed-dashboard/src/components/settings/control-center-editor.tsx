@@ -7,7 +7,6 @@ import {
   Coins,
   Crown,
   Gamepad2,
-  ImageIcon,
   Search,
   ShieldCheck,
   Sparkles,
@@ -44,6 +43,20 @@ interface EditorState {
 
 const selectClass =
   "h-10 w-full rounded-lg border border-white/10 bg-steel/60 px-3.5 text-sm text-fog outline-none transition-colors focus:border-violet/60 focus:ring-1 focus:ring-violet/60 disabled:cursor-not-allowed disabled:opacity-50";
+
+const PAYMENT_LABELS = {
+  kofi: "Ko-fi",
+  patreon: "Patreon",
+  bmc: "Buy Me a Coffee",
+} as const;
+
+const STATUS_CARDS = [
+  { key: "ai", label: "AI", icon: Bot },
+  { key: "leveling", label: "Leveling", icon: Star },
+  { key: "members", label: "XP members", icon: Coins },
+  { key: "modules", label: "Modules enabled", icon: Gamepad2 },
+  { key: "providers", label: "Providers", icon: Sparkles },
+] as const;
 
 function cloneState(state: EditorState): EditorState {
   return JSON.parse(JSON.stringify(state)) as EditorState;
@@ -96,7 +109,12 @@ function ToggleRow({
         <Label htmlFor={id}>{label}</Label>
         <p className="mt-0.5 text-xs text-ash">{description}</p>
       </div>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} />
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onChange}
+        disabled={disabled}
+      />
     </div>
   );
 }
@@ -114,34 +132,65 @@ function MultiChannelPicker({
 }) {
   return (
     <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-      {channels.map((channel) => {
-        const checked = selected.includes(channel.id);
-        return (
-          <label
-            key={channel.id}
-            className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-fog transition-colors hover:border-violet/40"
-          >
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={() => onToggle(channel.id)}
-              disabled={disabled}
-              className="h-4 w-4 accent-violet"
-            />
-            <span className="truncate">#{channel.name}</span>
-            {!channel.canSend ? (
-              <span className="ml-auto text-[10px] uppercase tracking-wide text-amber-300">
-                read only
-              </span>
-            ) : null}
-          </label>
-        );
-      })}
+      {channels.map((channel) => (
+        <label
+          key={channel.id}
+          className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-fog transition-colors hover:border-violet/40"
+        >
+          <input
+            type="checkbox"
+            checked={selected.includes(channel.id)}
+            onChange={() => onToggle(channel.id)}
+            disabled={disabled}
+            className="h-4 w-4 accent-violet"
+          />
+          <span className="truncate">#{channel.name}</span>
+          {!channel.canSend ? (
+            <span className="ml-auto text-[10px] uppercase tracking-wide text-amber-300">
+              read only
+            </span>
+          ) : null}
+        </label>
+      ))}
     </div>
   );
 }
 
-export function ControlCenterEditor({ guildId, initialData }: ControlCenterEditorProps) {
+function NumberField({
+  id,
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="mt-1.5"
+      />
+    </div>
+  );
+}
+
+export function ControlCenterEditor({
+  guildId,
+  initialData,
+}: ControlCenterEditorProps) {
   const { toast } = useToast();
   const initialState = useMemo<EditorState>(
     () => ({ config: initialData.config, leveling: initialData.leveling }),
@@ -156,7 +205,10 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
   const [commandSearch, setCommandSearch] = useState("");
 
   const payload = useMemo(() => savePayload(state), [state]);
-  const validation = useMemo(() => controlCenterSaveSchema.safeParse(payload), [payload]);
+  const validation = useMemo(
+    () => controlCenterSaveSchema.safeParse(payload),
+    [payload]
+  );
   const hasErrors = !validation.success;
   const dirty = JSON.stringify(savePayload(saved)) !== JSON.stringify(payload);
 
@@ -179,14 +231,17 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
     setSuccess(null);
   }, []);
 
-  const patchLeveling = useCallback((patch: Partial<DashboardLevelingConfig>) => {
-    setState((previous) => ({
-      ...previous,
-      leveling: { ...previous.leveling, ...patch },
-    }));
-    setServerError(null);
-    setSuccess(null);
-  }, []);
+  const patchLeveling = useCallback(
+    (patch: Partial<DashboardLevelingConfig>) => {
+      setState((previous) => ({
+        ...previous,
+        leveling: { ...previous.leveling, ...patch },
+      }));
+      setServerError(null);
+      setSuccess(null);
+    },
+    []
+  );
 
   const toggleArrayValue = useCallback((values: string[], value: string) => {
     return values.includes(value)
@@ -203,9 +258,14 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
   const handleSave = useCallback(async () => {
     const parsed = controlCenterSaveSchema.safeParse(payload);
     if (!parsed.success) {
-      const first = parsed.error.issues[0]?.message ?? "Some settings are invalid.";
+      const first =
+        parsed.error.issues[0]?.message ?? "Some settings are invalid.";
       setServerError(first);
-      toast({ title: "Fix the highlighted settings", description: first, variant: "error" });
+      toast({
+        title: "Fix the highlighted settings",
+        description: first,
+        variant: "error",
+      });
       return;
     }
 
@@ -225,7 +285,11 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
           .flat()
           .find((value): value is string => typeof value === "string");
         setServerError(fieldMessage ?? message);
-        toast({ title: "Save failed", description: fieldMessage ?? message, variant: "error" });
+        toast({
+          title: "Save failed",
+          description: fieldMessage ?? message,
+          variant: "error",
+        });
         return;
       }
 
@@ -266,6 +330,18 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
     ? null
     : validation.error.issues[0]?.message ?? "Some settings are invalid.";
 
+  const statusValues: Record<(typeof STATUS_CARDS)[number]["key"], string> = {
+    ai: state.config.aiEnabled ? "Enabled" : "Disabled",
+    leveling: state.leveling.enabled ? "Enabled" : "Disabled",
+    members: stats.available ? stats.members.toLocaleString() : "—",
+    modules: String(
+      initialData.modules.length - state.config.disabledModules.length
+    ),
+    providers: String(
+      Object.values(initialData.aiProviders).filter(Boolean).length
+    ),
+  };
+
   return (
     <div>
       <UnsavedChangesBanner
@@ -285,19 +361,17 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {[
-          [Bot, "AI", state.config.aiEnabled ? "Enabled" : "Disabled"],
-          [Star, "Leveling", state.leveling.enabled ? "Enabled" : "Disabled"],
-          [Coins, "XP members", stats.available ? stats.members.toLocaleString() : "—"],
-          [Gamepad2, "Modules enabled", String(initialData.modules.length - state.config.disabledModules.length)],
-          [Sparkles, "Providers", String(Object.values(initialData.aiProviders).filter(Boolean).length)],
-        ].map(([Icon, label, value]) => {
-          const CardIcon = Icon as typeof Bot;
+        {STATUS_CARDS.map((item) => {
+          const Icon = item.icon;
           return (
-            <div key={String(label)} className="glass rounded-xl p-4">
-              <CardIcon className="mb-2 h-4 w-4 text-violet-bright" />
-              <p className="text-[11px] uppercase tracking-wide text-ash">{String(label)}</p>
-              <p className="mt-1 font-display text-lg font-semibold text-fog">{String(value)}</p>
+            <div key={item.key} className="glass rounded-xl p-4">
+              <Icon className="mb-2 h-4 w-4 text-violet-bright" />
+              <p className="text-[11px] uppercase tracking-wide text-ash">
+                {item.label}
+              </p>
+              <p className="mt-1 font-display text-lg font-semibold text-fog">
+                {statusValues[item.key]}
+              </p>
             </div>
           );
         })}
@@ -306,7 +380,7 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
       <div className="space-y-6">
         <DashboardCard
           title="AI chat and memory"
-          description="Controls the live mention/reply AI path without exposing provider keys."
+          description="Controls mention/reply AI without exposing provider keys."
           action={<Bot className="h-5 w-5 text-violet-bright" />}
         >
           <div className="grid gap-6 lg:grid-cols-2">
@@ -321,68 +395,66 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
               <ToggleRow
                 id="ai-memory"
                 label="Short-term conversation memory"
-                description="Include recent messages in the next AI request."
+                description="Include recent messages in the next request."
                 checked={state.config.aiMemoryEnabled}
-                onChange={(checked) => patchConfig({ aiMemoryEnabled: checked })}
+                onChange={(checked) =>
+                  patchConfig({ aiMemoryEnabled: checked })
+                }
               />
               <ToggleRow
                 id="ai-long-memory"
                 label="Long-term memory"
                 description="Read and extract durable user memories."
                 checked={state.config.aiLongTermMemoryEnabled}
-                onChange={(checked) => patchConfig({ aiLongTermMemoryEnabled: checked })}
+                onChange={(checked) =>
+                  patchConfig({ aiLongTermMemoryEnabled: checked })
+                }
               />
               <ToggleRow
                 id="legacy-xp"
                 label="Legacy economy XP from AI chat"
-                description="Keep economy XP boosts and quest compatibility alongside server leveling."
+                description="Keep economy boosts and quest compatibility alongside server leveling."
                 checked={state.config.legacyEconomyXpEnabled}
-                onChange={(checked) => patchConfig({ legacyEconomyXpEnabled: checked })}
+                onChange={(checked) =>
+                  patchConfig({ legacyEconomyXpEnabled: checked })
+                }
               />
             </div>
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <Label htmlFor="ai-max-tokens">Max tokens</Label>
-                  <Input
-                    id="ai-max-tokens"
-                    type="number"
-                    min={100}
-                    max={1500}
-                    value={state.config.aiMaxTokens}
-                    onChange={(event) => patchConfig({ aiMaxTokens: Number(event.target.value) })}
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ai-rate-limit">Requests</Label>
-                  <Input
-                    id="ai-rate-limit"
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={state.config.aiRateLimit}
-                    onChange={(event) => patchConfig({ aiRateLimit: Number(event.target.value) })}
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ai-rate-window">Window (sec)</Label>
-                  <Input
-                    id="ai-rate-window"
-                    type="number"
-                    min={10}
-                    max={600}
-                    value={state.config.aiRateWindowSeconds}
-                    onChange={(event) =>
-                      patchConfig({ aiRateWindowSeconds: Number(event.target.value) })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
+                <NumberField
+                  id="ai-max-tokens"
+                  label="Max tokens"
+                  min={100}
+                  max={1500}
+                  value={state.config.aiMaxTokens}
+                  onChange={(value) => patchConfig({ aiMaxTokens: value })}
+                />
+                <NumberField
+                  id="ai-rate-limit"
+                  label="Requests"
+                  min={1}
+                  max={30}
+                  value={state.config.aiRateLimit}
+                  onChange={(value) => patchConfig({ aiRateLimit: value })}
+                />
+                <NumberField
+                  id="ai-rate-window"
+                  label="Window (sec)"
+                  min={10}
+                  max={600}
+                  value={state.config.aiRateWindowSeconds}
+                  onChange={(value) =>
+                    patchConfig({ aiRateWindowSeconds: value })
+                  }
+                />
               </div>
+
               <div>
-                <Label htmlFor="ai-custom-prompt">Server-specific AI instruction</Label>
+                <Label htmlFor="ai-custom-prompt">
+                  Server-specific AI instruction
+                </Label>
                 <Textarea
                   id="ai-custom-prompt"
                   className="mt-1.5"
@@ -390,18 +462,21 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                   maxLength={2000}
                   value={state.config.aiCustomPrompt ?? ""}
                   onChange={(event) =>
-                    patchConfig({ aiCustomPrompt: event.target.value || null })
+                    patchConfig({
+                      aiCustomPrompt: event.target.value || null,
+                    })
                   }
-                  placeholder="Example: Be concise, helpful, English-only, and avoid pinging roles."
+                  placeholder="Be concise, helpful, English-only, and avoid pinging roles."
                 />
                 <p className="mt-1 text-right text-xs text-ash">
                   {state.config.aiCustomPrompt?.length ?? 0}/2000
                 </p>
               </div>
+
               <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 text-xs text-ash">
-                Gemini: {initialData.aiProviders.gemini ? "configured" : "unavailable"} · Groq:{" "}
-                {initialData.aiProviders.groq ? "configured" : "unavailable"} · OpenRouter:{" "}
-                {initialData.aiProviders.openRouter ? "configured" : "unavailable"}
+                Gemini: {initialData.aiProviders.gemini ? "configured" : "unavailable"}
+                {" · "}Groq: {initialData.aiProviders.groq ? "configured" : "unavailable"}
+                {" · "}OpenRouter: {initialData.aiProviders.openRouter ? "configured" : "unavailable"}
               </div>
             </div>
           </div>
@@ -409,14 +484,16 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
 
         <DashboardCard
           title="Channel access"
-          description="Restrict all prefix commands and AI chat to selected channels."
+          description="Restrict prefix commands and AI chat to selected channels."
         >
           <ToggleRow
             id="channel-restriction"
             label="Enable channel restriction"
             description="Admin recovery commands remain available even if the allow-list is empty."
             checked={state.config.channelRestrictionEnabled}
-            onChange={(checked) => patchConfig({ channelRestrictionEnabled: checked })}
+            onChange={(checked) =>
+              patchConfig({ channelRestrictionEnabled: checked })
+            }
           />
           <div className="mt-4">
             <MultiChannelPicker
@@ -425,7 +502,10 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
               disabled={!state.config.channelRestrictionEnabled}
               onToggle={(channelId) =>
                 patchConfig({
-                  allowedChannels: toggleArrayValue(state.config.allowedChannels, channelId),
+                  allowedChannels: toggleArrayValue(
+                    state.config.allowedChannels,
+                    channelId
+                  ),
                 })
               }
             />
@@ -434,28 +514,34 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
 
         <DashboardCard
           title="Feature modules"
-          description="Enable or disable entire command systems. Help and channel recovery commands cannot be disabled."
+          description="Enable or disable complete command systems. Help and recovery commands stay protected."
           action={<Gamepad2 className="h-5 w-5 text-violet-bright" />}
         >
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {initialData.modules.map((module) => {
               const enabled = !state.config.disabledModules.includes(module.key);
-              const icon = module.key === "images" ? ImageIcon : module.key.includes("economy") ? Coins : Gamepad2;
-              const ModuleIcon = icon;
               return (
-                <div key={module.key} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                <div
+                  key={module.key}
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <ModuleIcon className="mb-2 h-4 w-4 text-violet-bright" />
-                      <p className="text-sm font-medium text-fog">{module.label}</p>
-                      <p className="mt-1 text-xs text-ash">{module.description}</p>
+                      <p className="text-sm font-medium text-fog">
+                        {module.label}
+                      </p>
+                      <p className="mt-1 text-xs text-ash">
+                        {module.description}
+                      </p>
                     </div>
                     <Switch
                       checked={enabled}
                       onCheckedChange={(checked) =>
                         patchConfig({
                           disabledModules: checked
-                            ? state.config.disabledModules.filter((key) => key !== module.key)
+                            ? state.config.disabledModules.filter(
+                                (key) => key !== module.key
+                              )
                             : [...state.config.disabledModules, module.key],
                         })
                       }
@@ -469,7 +555,7 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
 
         <DashboardCard
           title="Individual commands"
-          description="Disable exact commands while leaving the rest of their module active."
+          description="Disable exact commands while leaving their module active."
           action={<Search className="h-5 w-5 text-violet-bright" />}
         >
           <div className="relative mb-4">
@@ -483,15 +569,21 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
           </div>
           <div className="grid max-h-[34rem] gap-2 overflow-y-auto pr-1 md:grid-cols-2">
             {visibleCommands.map((command) => {
-              const enabled = !state.config.disabledCommands.includes(command.name);
+              const enabled = !state.config.disabledCommands.includes(
+                command.name
+              );
               return (
                 <div
                   key={`${command.categoryKey}:${command.name}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-mono text-xs text-fog">{command.name}</p>
-                    <p className="truncate text-[11px] text-ash">{command.description}</p>
+                    <p className="truncate font-mono text-xs text-fog">
+                      {command.name}
+                    </p>
+                    <p className="truncate text-[11px] text-ash">
+                      {command.description}
+                    </p>
                   </div>
                   <Switch
                     checked={command.protected ? true : enabled}
@@ -499,7 +591,9 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                     onCheckedChange={(checked) =>
                       patchConfig({
                         disabledCommands: checked
-                          ? state.config.disabledCommands.filter((name) => name !== command.name)
+                          ? state.config.disabledCommands.filter(
+                              (name) => name !== command.name
+                            )
                           : [...state.config.disabledCommands, command.name],
                       })
                     }
@@ -512,7 +606,7 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
 
         <DashboardCard
           title="Moderation and protection"
-          description="Controls the existing anti-spam, anti-link, anti-invite, mod-log, and slash moderation paths."
+          description="Controls existing anti-spam, anti-link, anti-invite, mod-log, and slash moderation paths."
           action={<ShieldCheck className="h-5 w-5 text-violet-bright" />}
         >
           <div className="grid gap-6 lg:grid-cols-2">
@@ -522,7 +616,9 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                 label="Moderation slash commands"
                 description="Warn, timeout, kick, ban, welcome, and autorole setup commands."
                 checked={state.config.moderationCommandsEnabled}
-                onChange={(checked) => patchConfig({ moderationCommandsEnabled: checked })}
+                onChange={(checked) =>
+                  patchConfig({ moderationCommandsEnabled: checked })
+                }
               />
               <ToggleRow
                 id="anti-spam"
@@ -546,15 +642,20 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                 onChange={(checked) => patchConfig({ antiInvite: checked })}
               />
             </div>
+
             <div className="space-y-4">
               <div>
-                <Label htmlFor="mod-log-channel">Moderation log channel</Label>
+                <Label htmlFor="mod-log-channel">
+                  Moderation log channel
+                </Label>
                 <select
                   id="mod-log-channel"
                   className={`${selectClass} mt-1.5`}
                   value={state.config.modLogChannelId ?? ""}
                   onChange={(event) =>
-                    patchConfig({ modLogChannelId: event.target.value || null })
+                    patchConfig({
+                      modLogChannelId: event.target.value || null,
+                    })
                   }
                 >
                   <option value="">No log channel</option>
@@ -567,8 +668,11 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                     ))}
                 </select>
               </div>
+
               <div>
-                <Label htmlFor="link-whitelist">Allowed link domains</Label>
+                <Label htmlFor="link-whitelist">
+                  Allowed link domains
+                </Label>
                 <Textarea
                   id="link-whitelist"
                   className="mt-1.5"
@@ -601,15 +705,20 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                 label="Enable server leveling"
                 description="Pause or resume without deleting member XP."
                 checked={state.leveling.enabled}
-                onChange={(checked) => patchLeveling({ enabled: checked })}
+                onChange={(checked) =>
+                  patchLeveling({ enabled: checked })
+                }
               />
               <ToggleRow
                 id="leveling-announcements"
                 label="Level-up announcements"
-                description="Send the working level card when a member reaches a new level."
+                description="Send the level card when a member reaches a new level."
                 checked={state.leveling.announceLevelUps}
-                onChange={(checked) => patchLeveling({ announceLevelUps: checked })}
+                onChange={(checked) =>
+                  patchLeveling({ announceLevelUps: checked })
+                }
               />
+
               <div className="mt-4">
                 <Label htmlFor="level-channel">Level-up channel</Label>
                 <select
@@ -617,7 +726,9 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                   className={`${selectClass} mt-1.5`}
                   value={state.leveling.levelUpChannelId ?? ""}
                   onChange={(event) =>
-                    patchLeveling({ levelUpChannelId: event.target.value || null })
+                    patchLeveling({
+                      levelUpChannelId: event.target.value || null,
+                    })
                   }
                 >
                   <option value="">Select a channel</option>
@@ -630,47 +741,37 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                     ))}
                 </select>
               </div>
+
               <div className="mt-4 grid grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="xp-min">XP min</Label>
-                  <Input
-                    id="xp-min"
-                    type="number"
-                    min={1}
-                    max={1000}
-                    className="mt-1.5"
-                    value={state.leveling.xpMin}
-                    onChange={(event) => patchLeveling({ xpMin: Number(event.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="xp-max">XP max</Label>
-                  <Input
-                    id="xp-max"
-                    type="number"
-                    min={1}
-                    max={1000}
-                    className="mt-1.5"
-                    value={state.leveling.xpMax}
-                    onChange={(event) => patchLeveling({ xpMax: Number(event.target.value) })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="xp-cooldown">Cooldown</Label>
-                  <Input
-                    id="xp-cooldown"
-                    type="number"
-                    min={5}
-                    max={3600}
-                    className="mt-1.5"
-                    value={state.leveling.cooldownSeconds}
-                    onChange={(event) =>
-                      patchLeveling({ cooldownSeconds: Number(event.target.value) })
-                    }
-                  />
-                </div>
+                <NumberField
+                  id="xp-min"
+                  label="XP min"
+                  min={1}
+                  max={1000}
+                  value={state.leveling.xpMin}
+                  onChange={(value) => patchLeveling({ xpMin: value })}
+                />
+                <NumberField
+                  id="xp-max"
+                  label="XP max"
+                  min={1}
+                  max={1000}
+                  value={state.leveling.xpMax}
+                  onChange={(value) => patchLeveling({ xpMax: value })}
+                />
+                <NumberField
+                  id="xp-cooldown"
+                  label="Cooldown"
+                  min={5}
+                  max={3600}
+                  value={state.leveling.cooldownSeconds}
+                  onChange={(value) =>
+                    patchLeveling({ cooldownSeconds: value })
+                  }
+                />
               </div>
             </div>
+
             <div>
               <Label>Ignored XP channels</Label>
               <p className="mb-3 mt-1 text-xs text-ash">
@@ -688,18 +789,27 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                   })
                 }
               />
+
               <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-                  <p className="text-lg font-semibold text-fog">{stats.members.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-fog">
+                    {stats.members.toLocaleString()}
+                  </p>
                   <p className="text-[10px] uppercase text-ash">Members</p>
                 </div>
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-                  <p className="text-lg font-semibold text-fog">{stats.totalXp.toLocaleString()}</p>
+                  <p className="text-lg font-semibold text-fog">
+                    {stats.totalXp.toLocaleString()}
+                  </p>
                   <p className="text-[10px] uppercase text-ash">Total XP</p>
                 </div>
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-                  <p className="text-lg font-semibold text-fog">{stats.totalMessages.toLocaleString()}</p>
-                  <p className="text-[10px] uppercase text-ash">XP messages</p>
+                  <p className="text-lg font-semibold text-fog">
+                    {stats.totalMessages.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] uppercase text-ash">
+                    XP messages
+                  </p>
                 </div>
               </div>
             </div>
@@ -708,7 +818,7 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
 
         <DashboardCard
           title="Premium configuration"
-          description="Role and payment links used by the existing supporter commands and webhook grants."
+          description="Role and payment links used by supporter commands and webhook grants."
           action={<Crown className="h-5 w-5 text-amber-300" />}
         >
           <div className="grid gap-4 lg:grid-cols-2">
@@ -719,41 +829,51 @@ export function ControlCenterEditor({ guildId, initialData }: ControlCenterEdito
                 className={`${selectClass} mt-1.5`}
                 value={state.config.premiumRoleId ?? ""}
                 onChange={(event) =>
-                  patchConfig({ premiumRoleId: event.target.value || null })
+                  patchConfig({
+                    premiumRoleId: event.target.value || null,
+                  })
                 }
               >
                 <option value="">No premium role</option>
                 {initialData.roles
-                  .filter((role) => role.assignable || role.id === state.config.premiumRoleId)
+                  .filter(
+                    (role) =>
+                      role.assignable ||
+                      role.id === state.config.premiumRoleId
+                  )
                   .map((role) => (
                     <option key={role.id} value={role.id}>
-                      {role.name}{role.assignable ? "" : " (unavailable)"}
+                      {role.name}
+                      {role.assignable ? "" : " (unavailable)"}
                     </option>
                   ))}
               </select>
             </div>
+
             <div className="grid gap-3 sm:grid-cols-3">
-              {(["kofi", "patreon", "bmc"] as const).map((provider) => (
-                <div key={provider}>
-                  <Label htmlFor={`payment-${provider}`}>
-                    {provider === "bmc" ? "Buy Me a Coffee" : provider[0].toUpperCase() + provider.slice(1)}
-                  </Label>
-                  <Input
-                    id={`payment-${provider}`}
-                    className="mt-1.5"
-                    value={state.config.paymentLinks[provider] ?? ""}
-                    onChange={(event) =>
-                      patchConfig({
-                        paymentLinks: {
-                          ...state.config.paymentLinks,
-                          [provider]: event.target.value || null,
-                        },
-                      })
-                    }
-                    placeholder="https://..."
-                  />
-                </div>
-              ))}
+              {(Object.keys(PAYMENT_LABELS) as Array<keyof typeof PAYMENT_LABELS>).map(
+                (provider) => (
+                  <div key={provider}>
+                    <Label htmlFor={`payment-${provider}`}>
+                      {PAYMENT_LABELS[provider]}
+                    </Label>
+                    <Input
+                      id={`payment-${provider}`}
+                      className="mt-1.5"
+                      value={state.config.paymentLinks[provider] ?? ""}
+                      onChange={(event) =>
+                        patchConfig({
+                          paymentLinks: {
+                            ...state.config.paymentLinks,
+                            [provider]: event.target.value || null,
+                          },
+                        })
+                      }
+                      placeholder="https://..."
+                    />
+                  </div>
+                )
+              )}
             </div>
           </div>
         </DashboardCard>
