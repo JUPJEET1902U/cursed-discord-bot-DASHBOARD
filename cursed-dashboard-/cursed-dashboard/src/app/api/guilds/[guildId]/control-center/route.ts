@@ -4,23 +4,14 @@ import { verifyGuildManageAccess } from "@/lib/guild-auth";
 import { botApiRequest } from "@/lib/bot-api";
 import { botApiErrorResponse } from "@/lib/bot-api-route";
 import { readJsonBody, zodErrorResponse } from "@/lib/api-route-helpers";
-import { welcomeConfigSchema } from "@/lib/validation/welcome";
-import type { BotWelcomeData } from "@/types/bot-api";
-import type { DiscordChannel } from "@/types/discord";
-import type { WelcomeConfig } from "@/types/welcome";
+import { controlCenterSaveSchema } from "@/lib/validation/control-center";
+import type {
+  ControlCenterData,
+  ControlCenterSavePayload,
+} from "@/types/control-center";
 
 interface RouteParams {
   params: Promise<{ guildId: string }>;
-}
-
-function toDiscordChannel(channel: BotWelcomeData["channels"][number]): DiscordChannel {
-  return {
-    id: channel.id,
-    name: channel.name,
-    type: channel.type,
-    parent_id: channel.parentId,
-    position: channel.position,
-  };
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -31,13 +22,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const data = await botApiRequest<BotWelcomeData>(`guilds/${guildId}/welcome`);
-    return NextResponse.json({
-      config: data.config,
-      channels: data.channels.map(toDiscordChannel),
-    });
+    const data = await botApiRequest<ControlCenterData>(
+      `guilds/${guildId}/control-center`
+    );
+    return NextResponse.json(data);
   } catch (error) {
-    return botApiErrorResponse(error, "Couldn't load welcome settings.");
+    return botApiErrorResponse(error, "Couldn't load control center settings.");
   }
 }
 
@@ -51,25 +41,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   const bodyResult = await readJsonBody(request);
   if (!bodyResult.ok) return bodyResult.response;
 
-  let config: WelcomeConfig;
+  let payload: ControlCenterSavePayload;
   try {
-    config = welcomeConfigSchema.parse(bodyResult.body);
+    payload = controlCenterSaveSchema.strict().parse(bodyResult.body);
   } catch (error) {
     if (error instanceof ZodError) return zodErrorResponse(error);
     throw error;
   }
 
   try {
-    const data = await botApiRequest<{ config: WelcomeConfig }>(
-      `guilds/${guildId}/welcome`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      }
-    );
-    return NextResponse.json({ config: data.config });
+    const data = await botApiRequest<
+      Pick<ControlCenterData, "config" | "leveling" | "levelingStats">
+    >(`guilds/${guildId}/control-center`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return NextResponse.json(data);
   } catch (error) {
-    return botApiErrorResponse(error, "Couldn't save welcome settings.");
+    return botApiErrorResponse(error, "Couldn't save control center settings.");
   }
 }

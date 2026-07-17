@@ -1,14 +1,11 @@
+export type WelcomeCardTheme = "classic" | "midnight" | "neon";
+
 /**
- * Exact welcome fields read by the live bot's `utils/welcome.js` and
- * `utils/serverConfig.js`.
- *
- * The dashboard API writes these same top-level fields into the `guildConfigs`
- * MongoDB collection read by the bot's GuildConfigStore.
- *
- * Enabled state is intentionally not stored as `enabled`: in the bot, welcome
- * is enabled when `welcomeChannelId` is set and disabled when it is `null`.
+ * Exact flat welcome fields read by the live Railway bot. The dashboard writes
+ * these same top-level fields into the guild configuration used by CURSED.
  */
 export interface WelcomeConfig {
+  welcomeEnabled: boolean;
   welcomeChannelId: string | null;
   welcomeMessage: string | null;
   welcomeUseAI: boolean;
@@ -16,9 +13,15 @@ export interface WelcomeConfig {
   welcomeThumbnail: boolean;
   welcomeImageUrl: string | null;
   welcomeFooter: string | null;
+  welcomeCardEnabled: boolean;
+  welcomeCardTheme: WelcomeCardTheme;
+  welcomeCardBackground: string | null;
+  welcomeAccentColor: string | null;
+  welcomeMediaUrl: string | null;
 }
 
 export const DEFAULT_WELCOME_CONFIG: WelcomeConfig = {
+  welcomeEnabled: true,
   welcomeChannelId: null,
   welcomeMessage: null,
   welcomeUseAI: false,
@@ -26,6 +29,11 @@ export const DEFAULT_WELCOME_CONFIG: WelcomeConfig = {
   welcomeThumbnail: true,
   welcomeImageUrl: null,
   welcomeFooter: null,
+  welcomeCardEnabled: true,
+  welcomeCardTheme: "classic",
+  welcomeCardBackground: null,
+  welcomeAccentColor: null,
+  welcomeMediaUrl: null,
 };
 
 export const BOT_DEFAULT_WELCOME_MESSAGE =

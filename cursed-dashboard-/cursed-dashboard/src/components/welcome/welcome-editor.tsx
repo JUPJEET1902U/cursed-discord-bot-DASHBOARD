@@ -1,30 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, RotateCcw, Save } from "lucide-react";
-import { ZodError } from "zod";
+import { CheckCircle2, ImageIcon, Sparkles } from "lucide-react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
-import { ServerErrorBanner, UnsavedChangesBanner } from "@/components/dashboard/editor-chrome";
-import { Button } from "@/components/ui/button";
+import {
+  EditorActions,
+  ServerErrorBanner,
+  UnsavedChangesBanner,
+} from "@/components/dashboard/editor-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ColorPicker } from "@/components/welcome/color-picker";
 import { WelcomePreview } from "@/components/welcome/welcome-preview";
 import { useToast } from "@/hooks/use-toast";
-import { WELCOME_VARIABLES } from "@/lib/welcome-variables";
-import { welcomeConfigSchema } from "@/lib/validation/welcome";
 import { cn } from "@/lib/utils";
-import { DEFAULT_WELCOME_CONFIG, type WelcomeConfig } from "@/types/welcome";
+import { welcomeConfigSchema } from "@/lib/validation/welcome";
+import { WELCOME_VARIABLES } from "@/lib/welcome-variables";
 import type { DiscordChannel } from "@/types/discord";
+import {
+  DEFAULT_WELCOME_CONFIG,
+  type WelcomeCardTheme,
+  type WelcomeConfig,
+} from "@/types/welcome";
 
 interface WelcomeEditorProps {
   guildId: string;
@@ -33,63 +32,69 @@ interface WelcomeEditorProps {
   initialChannels: DiscordChannel[];
 }
 
-type FieldErrors = Partial<Record<keyof WelcomeConfig | "enabled", string>>;
+type FieldErrors = Partial<Record<keyof WelcomeConfig, string>>;
 
-function disabledConfig(config: WelcomeConfig): WelcomeConfig {
-  return {
-    ...normalizeConfig(config),
-    welcomeChannelId: null,
-  };
-}
+const selectClass =
+  "h-10 w-full rounded-lg border border-white/10 bg-steel/60 px-3.5 text-sm text-fog outline-none transition-colors focus:border-violet/60 focus:ring-1 focus:ring-violet/60";
 
-function normalizeConfig(config: WelcomeConfig): WelcomeConfig {
+function normalizeConfig(config: Partial<WelcomeConfig>): WelcomeConfig {
   return {
+    ...DEFAULT_WELCOME_CONFIG,
+    ...config,
+    welcomeEnabled: config.welcomeEnabled !== false,
     welcomeChannelId: config.welcomeChannelId || null,
     welcomeMessage: config.welcomeMessage || null,
-    welcomeUseAI: config.welcomeUseAI,
+    welcomeUseAI: config.welcomeUseAI === true,
     welcomeColor: config.welcomeColor || null,
     welcomeThumbnail: config.welcomeThumbnail !== false,
     welcomeImageUrl: config.welcomeImageUrl || null,
     welcomeFooter: config.welcomeFooter || null,
+    welcomeCardEnabled: config.welcomeCardEnabled !== false,
+    welcomeCardTheme: config.welcomeCardTheme || "classic",
+    welcomeCardBackground: config.welcomeCardBackground || null,
+    welcomeAccentColor: config.welcomeAccentColor || null,
+    welcomeMediaUrl: config.welcomeMediaUrl || null,
   };
-}
-
-function validate(enabled: boolean, config: WelcomeConfig): FieldErrors {
-  const errors: FieldErrors = {};
-  if (enabled && !config.welcomeChannelId) {
-    errors.welcomeChannelId =
-      "Choose a welcome channel before enabling welcome messages.";
-  }
-
-  try {
-    welcomeConfigSchema.parse(enabled ? normalizeConfig(config) : disabledConfig(config));
-  } catch (err) {
-    if (err instanceof ZodError) {
-      const fields = err.flatten().fieldErrors;
-      for (const [key, value] of Object.entries(fields)) {
-        const first = value?.[0];
-        if (first) errors[key as keyof WelcomeConfig] = first;
-      }
-    }
-  }
-
-  return errors;
 }
 
 function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {WELCOME_VARIABLES.map((v) => (
+      {WELCOME_VARIABLES.map((variable) => (
         <button
-          key={v.token}
+          key={variable.token}
           type="button"
-          onClick={() => onInsert(v.token)}
-          title={v.label}
+          onClick={() => onInsert(variable.token)}
+          title={variable.label}
           className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[11px] text-ash transition-colors hover:border-violet/50 hover:text-fog"
         >
-          {v.token}
+          {variable.token}
         </button>
       ))}
+    </div>
+  );
+}
+
+function ToggleRow({
+  id,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] py-3 last:border-b-0">
+      <div>
+        <Label htmlFor={id}>{label}</Label>
+        <p className="mt-0.5 text-xs text-ash">{description}</p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
@@ -101,110 +106,102 @@ export function WelcomeEditor({
   initialChannels,
 }: WelcomeEditorProps) {
   const { toast } = useToast();
-  const [channels] = useState<DiscordChannel[]>(initialChannels);
-  const [savedConfig, setSavedConfig] = useState(() =>
-    normalizeConfig(initialConfig)
-  );
+  const [savedConfig, setSavedConfig] = useState(() => normalizeConfig(initialConfig));
   const [config, setConfig] = useState(() => normalizeConfig(initialConfig));
-  const [savedEnabled, setSavedEnabled] = useState(
-    Boolean(initialConfig.welcomeChannelId)
-  );
-  const [enabled, setEnabled] = useState(Boolean(initialConfig.welcomeChannelId));
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverFieldErrors, setServerFieldErrors] = useState<FieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
 
-  const dirty =
-    enabled !== savedEnabled ||
-    JSON.stringify(normalizeConfig(config)) !== JSON.stringify(savedConfig);
-  const clientErrors = useMemo(() => validate(enabled, config), [enabled, config]);
-  const errors = { ...serverFieldErrors, ...clientErrors };
+  const dirty = JSON.stringify(config) !== JSON.stringify(savedConfig);
+  const validation = useMemo(() => welcomeConfigSchema.safeParse(config), [config]);
+  const clientFieldErrors = useMemo<FieldErrors>(() => {
+    if (validation.success) return {};
+    const errors: FieldErrors = {};
+    for (const issue of validation.error.issues) {
+      const key = issue.path[0] as keyof WelcomeConfig | undefined;
+      if (key && !errors[key]) errors[key] = issue.message;
+    }
+    return errors;
+  }, [validation]);
+  const errors = { ...serverFieldErrors, ...clientFieldErrors };
   const hasErrors = Object.values(errors).some(Boolean);
 
   useEffect(() => {
     if (!dirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
   const patch = useCallback((next: Partial<WelcomeConfig>) => {
-    setConfig((prev) => normalizeConfig({ ...prev, ...next }));
+    setConfig((previous) => normalizeConfig({ ...previous, ...next }));
+    setServerError(null);
     setServerFieldErrors({});
     setSuccess(null);
   }, []);
 
   const handleReset = useCallback(() => {
     setConfig(savedConfig);
-    setEnabled(savedEnabled);
     setServerError(null);
     setServerFieldErrors({});
     setSuccess(null);
-  }, [savedConfig, savedEnabled]);
+  }, [savedConfig]);
 
   const handleSave = useCallback(async () => {
-    if (hasErrors) {
-      toast({
-        title: "Fix the highlighted fields",
-        description: "Some welcome settings are not valid yet.",
-        variant: "error",
-      });
+    const parsed = welcomeConfigSchema.safeParse(config);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Some welcome settings are invalid.";
+      setServerError(message);
+      toast({ title: "Fix the welcome settings", description: message, variant: "error" });
       return;
     }
 
-    const payload = enabled ? normalizeConfig(config) : disabledConfig(config);
     setSaving(true);
     setServerError(null);
     setServerFieldErrors({});
     setSuccess(null);
-
     try {
-      const res = await fetch(`/api/guilds/${guildId}/welcome`, {
+      const response = await fetch(`/api/guilds/${guildId}/welcome`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
-      const data = await res.json();
-
-      if (!res.ok) {
+      const data = await response.json();
+      if (!response.ok) {
         const message = data?.error ?? "Couldn't save welcome settings.";
-        setServerError(message);
-        const nextFieldErrors: FieldErrors = {};
+        const nextErrors: FieldErrors = {};
         for (const [key, messages] of Object.entries(data?.fieldErrors ?? {})) {
           if (Array.isArray(messages) && typeof messages[0] === "string") {
-            nextFieldErrors[key as keyof WelcomeConfig] = messages[0];
+            nextErrors[key as keyof WelcomeConfig] = messages[0];
           }
         }
-        setServerFieldErrors(nextFieldErrors);
+        setServerFieldErrors(nextErrors);
+        setServerError(message);
         toast({ title: "Save failed", description: message, variant: "error" });
         return;
       }
 
-      const nextConfig = normalizeConfig(data.config ?? DEFAULT_WELCOME_CONFIG);
-      setConfig(nextConfig);
-      setSavedConfig(nextConfig);
-      setEnabled(Boolean(nextConfig.welcomeChannelId));
-      setSavedEnabled(Boolean(nextConfig.welcomeChannelId));
-      setSuccess("Welcome settings are active in the live bot.");
+      const next = normalizeConfig(data.config);
+      setConfig(next);
+      setSavedConfig(next);
+      setSuccess("The live bot is now using this welcome configuration.");
       toast({
         title: "Welcome settings saved",
-        description: "The live CURSED bot is using this configuration.",
+        description: "Message, embed, and card changes are active in CURSED.",
         variant: "success",
       });
     } catch {
-      const message = "Network error - couldn't reach the server.";
+      const message = "Network error - couldn't reach the dashboard API.";
       setServerError(message);
       toast({ title: "Save failed", description: message, variant: "error" });
     } finally {
       setSaving(false);
     }
-  }, [config, enabled, guildId, hasErrors, toast]);
-
-  const messageLength = config.welcomeMessage?.length ?? 0;
+  }, [config, guildId, toast]);
 
   return (
     <div>
@@ -215,7 +212,6 @@ export function WelcomeEditor({
         onSave={handleSave}
         onReset={handleReset}
       />
-
       <ServerErrorBanner message={serverError} />
 
       {success ? (
@@ -227,227 +223,203 @@ export function WelcomeEditor({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
-          <DashboardCard
-            title="Welcome"
-            description="Choose where CURSED greets new members."
-          >
-            <div className="space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <Label htmlFor="welcome-enabled">Enable welcome messages</Label>
-                  <p className="mt-0.5 text-xs text-ash">
-                    CURSED will greet new members in the selected channel.
-                  </p>
-                </div>
-                <Switch
-                  id="welcome-enabled"
-                  checked={enabled}
-                  onCheckedChange={(checked) => {
-                    setEnabled(checked);
-                    setServerFieldErrors({});
-                    setSuccess(null);
-                  }}
-                />
-              </div>
+          <DashboardCard title="Welcome delivery" description="Choose where and whether CURSED greets new members.">
+            <ToggleRow
+              id="welcome-enabled"
+              label="Enable welcome messages"
+              description="Turning this off preserves every design setting but sends nothing."
+              checked={config.welcomeEnabled}
+              onChange={(checked) => patch({ welcomeEnabled: checked })}
+            />
+            <div className="mt-4">
+              <Label htmlFor="welcome-channel">Welcome channel</Label>
+              <select
+                id="welcome-channel"
+                className={`${selectClass} mt-1.5`}
+                value={config.welcomeChannelId ?? ""}
+                onChange={(event) => patch({ welcomeChannelId: event.target.value || null })}
+              >
+                <option value="">Select a channel</option>
+                {initialChannels.map((channel) => (
+                  <option key={channel.id} value={channel.id}>#{channel.name}</option>
+                ))}
+              </select>
+              {errors.welcomeChannelId ? (
+                <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeChannelId}</p>
+              ) : null}
+            </div>
+          </DashboardCard>
 
+          <DashboardCard title="Welcome message" description="Use the same placeholders supported by the live bot.">
+            <Textarea
+              value={config.welcomeMessage ?? ""}
+              onChange={(event) => patch({ welcomeMessage: event.target.value || null })}
+              placeholder="Welcome {mention} to {server}! You are member #{membercount}."
+              rows={5}
+              maxLength={2000}
+            />
+            <div className="flex items-start justify-between gap-3">
+              <VariableChips
+                onInsert={(token) => patch({ welcomeMessage: `${config.welcomeMessage ?? ""}${token}` })}
+              />
+              <span className={cn("shrink-0 pt-2 text-xs text-ash", (config.welcomeMessage?.length ?? 0) >= 1900 && "text-amber-300")}>
+                {config.welcomeMessage?.length ?? 0}/2000
+              </span>
+            </div>
+            {errors.welcomeMessage ? (
+              <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeMessage}</p>
+            ) : null}
+            <ToggleRow
+              id="welcome-ai"
+              label="Generate welcome text with AI"
+              description="Falls back to your custom or built-in message if providers fail."
+              checked={config.welcomeUseAI}
+              onChange={(checked) => patch({ welcomeUseAI: checked })}
+            />
+          </DashboardCard>
+
+          <DashboardCard
+            title="Premium welcome card"
+            description="Controls the PNG card generated by @napi-rs/canvas in Railway."
+            action={<Sparkles className="h-5 w-5 text-violet-bright" />}
+          >
+            <ToggleRow
+              id="welcome-card"
+              label="Generate a welcome card"
+              description="If Attach Files is unavailable, CURSED automatically sends the embed only."
+              checked={config.welcomeCardEnabled}
+              onChange={(checked) => patch({ welcomeCardEnabled: checked })}
+            />
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="welcome-channel">Text channel</Label>
+                <Label htmlFor="welcome-theme">Card theme</Label>
+                <select
+                  id="welcome-theme"
+                  className={`${selectClass} mt-1.5`}
+                  value={config.welcomeCardTheme}
+                  onChange={(event) => patch({ welcomeCardTheme: event.target.value as WelcomeCardTheme })}
+                >
+                  <option value="classic">Classic</option>
+                  <option value="midnight">Midnight</option>
+                  <option value="neon">Neon</option>
+                </select>
+              </div>
+              <div>
+                <Label>Card accent color</Label>
                 <div className="mt-1.5">
-                  <Select
-                    value={config.welcomeChannelId ?? undefined}
-                    onValueChange={(value) => patch({ welcomeChannelId: value })}
-                  >
-                    <SelectTrigger id="welcome-channel">
-                      <SelectValue placeholder="Select a channel..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channels.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-ash">
-                          No channels CURSED can use.
-                        </div>
-                      ) : (
-                        channels.map((channel) => (
-                          <SelectItem key={channel.id} value={channel.id}>
-                            #{channel.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <ColorPicker
+                    value={config.welcomeAccentColor ?? config.welcomeColor ?? "#5865F2"}
+                    onChange={(color) => patch({ welcomeAccentColor: color })}
+                  />
                 </div>
-                {errors.welcomeChannelId ? (
-                  <p className="mt-1.5 text-xs text-crimson-bright">
-                    {errors.welcomeChannelId}
-                  </p>
+                {errors.welcomeAccentColor ? (
+                  <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeAccentColor}</p>
                 ) : null}
               </div>
-
-              {!enabled ? (
-                <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ash">
-                  Welcome messages are disabled. Your message and appearance settings are preserved.
-                </div>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="welcome-card-background">Custom card background URL</Label>
+              <Input
+                id="welcome-card-background"
+                className="mt-1.5"
+                value={config.welcomeCardBackground ?? ""}
+                onChange={(event) => patch({ welcomeCardBackground: event.target.value || null })}
+                placeholder="https://example.com/welcome-background.webp"
+              />
+              {errors.welcomeCardBackground ? (
+                <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeCardBackground}</p>
+              ) : null}
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="welcome-media">Fallback media URL</Label>
+              <Input
+                id="welcome-media"
+                className="mt-1.5"
+                value={config.welcomeMediaUrl ?? ""}
+                onChange={(event) => patch({ welcomeMediaUrl: event.target.value || null })}
+                placeholder="Optional fallback background or media URL"
+              />
+              {errors.welcomeMediaUrl ? (
+                <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeMediaUrl}</p>
               ) : null}
             </div>
           </DashboardCard>
 
           <DashboardCard
-            title="Message"
-            description="Leave this blank to use CURSED's built-in welcome message."
+            title="Discord embed"
+            description="Controls the embed wrapped around the message and optional PNG card."
+            action={<ImageIcon className="h-5 w-5 text-violet-bright" />}
           >
-            <Textarea
-              value={config.welcomeMessage ?? ""}
-              onChange={(e) => patch({ welcomeMessage: e.target.value || null })}
-              placeholder="Welcome {mention} to {server}!"
-              rows={4}
-              maxLength={2000}
-            />
-            <div className="mt-1.5 flex items-start justify-between gap-3">
-              <VariableChips
-                onInsert={(token) =>
-                  patch({ welcomeMessage: `${config.welcomeMessage ?? ""}${token}` })
-                }
-              />
-              <span
-                className={cn(
-                  "shrink-0 pt-2 text-xs text-ash",
-                  messageLength > 2000 && "text-crimson-bright"
-                )}
-              >
-                {messageLength}/2000
-              </span>
-            </div>
-            {errors.welcomeMessage ? (
-              <p className="mt-1.5 text-xs text-crimson-bright">
-                {errors.welcomeMessage}
-              </p>
-            ) : null}
-          </DashboardCard>
-
-          <DashboardCard
-            title="Bot embed options"
-            description="Customize the appearance of the welcome embed."
-          >
-            <div className="space-y-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <Label htmlFor="welcome-ai">Use AI welcome text</Label>
-                  <p className="mt-0.5 text-xs text-ash">
-                    Falls back to your custom or default message if AI is unavailable.
-                  </p>
-                </div>
-                <Switch
-                  id="welcome-ai"
-                  checked={config.welcomeUseAI}
-                  onCheckedChange={(checked) => patch({ welcomeUseAI: checked })}
-                />
-              </div>
-
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="welcome-color">Embed color</Label>
+                <Label>Embed color</Label>
                 <div className="mt-1.5">
                   <ColorPicker
                     value={config.welcomeColor ?? "#5865F2"}
                     onChange={(color) => patch({ welcomeColor: color })}
                   />
                 </div>
-                {errors.welcomeColor ? (
-                  <p className="mt-1.5 text-xs text-crimson-bright">
-                    {errors.welcomeColor}
-                  </p>
-                ) : null}
               </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <Label htmlFor="welcome-thumbnail">Show member avatar</Label>
-                  <p className="mt-0.5 text-xs text-ash">
-                    Stored as welcomeThumbnail.
-                  </p>
-                </div>
-                <Switch
+              <div className="pt-1">
+                <ToggleRow
                   id="welcome-thumbnail"
+                  label="Show member avatar"
+                  description="Adds the joining member's avatar as the embed thumbnail."
                   checked={config.welcomeThumbnail}
-                  onCheckedChange={(checked) =>
-                    patch({ welcomeThumbnail: checked })
-                  }
+                  onChange={(checked) => patch({ welcomeThumbnail: checked })}
                 />
               </div>
-
-              <div>
-                <Label htmlFor="welcome-image">Banner image URL</Label>
-                <Input
-                  id="welcome-image"
-                  className="mt-1.5"
-                  value={config.welcomeImageUrl ?? ""}
-                  onChange={(e) =>
-                    patch({ welcomeImageUrl: e.target.value || null })
-                  }
-                  placeholder="https://example.com/banner.png"
-                />
-                {errors.welcomeImageUrl ? (
-                  <p className="mt-1.5 text-xs text-crimson-bright">
-                    {errors.welcomeImageUrl}
-                  </p>
-                ) : null}
-              </div>
-
-              <div>
-                <Label htmlFor="welcome-footer">Footer text</Label>
-                <Input
-                  id="welcome-footer"
-                  className="mt-1.5"
-                  value={config.welcomeFooter ?? ""}
-                  onChange={(e) =>
-                    patch({ welcomeFooter: e.target.value || null })
-                  }
-                  placeholder="Member #{membercount}"
-                  maxLength={2048}
-                />
-                <VariableChips
-                  onInsert={(token) =>
-                    patch({ welcomeFooter: `${config.welcomeFooter ?? ""}${token}` })
-                  }
-                />
-                {errors.welcomeFooter ? (
-                  <p className="mt-1.5 text-xs text-crimson-bright">
-                    {errors.welcomeFooter}
-                  </p>
-                ) : null}
-              </div>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="welcome-image">Embed banner URL</Label>
+              <Input
+                id="welcome-image"
+                className="mt-1.5"
+                value={config.welcomeImageUrl ?? ""}
+                onChange={(event) => patch({ welcomeImageUrl: event.target.value || null })}
+                placeholder="https://example.com/banner.png"
+              />
+              {errors.welcomeImageUrl ? (
+                <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeImageUrl}</p>
+              ) : null}
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="welcome-footer">Footer text</Label>
+              <Input
+                id="welcome-footer"
+                className="mt-1.5"
+                value={config.welcomeFooter ?? ""}
+                onChange={(event) => patch({ welcomeFooter: event.target.value || null })}
+                placeholder="Member #{membercount}"
+                maxLength={2048}
+              />
+              <VariableChips
+                onInsert={(token) => patch({ welcomeFooter: `${config.welcomeFooter ?? ""}${token}` })}
+              />
+              {errors.welcomeFooter ? (
+                <p className="mt-1.5 text-xs text-crimson-bright">{errors.welcomeFooter}</p>
+              ) : null}
             </div>
           </DashboardCard>
 
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              disabled={!dirty || saving}
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset
-            </Button>
-            <Button onClick={handleSave} disabled={!dirty || saving || hasErrors}>
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save changes
-            </Button>
+          <div className="flex justify-end">
+            <EditorActions
+              dirty={dirty}
+              saving={saving}
+              hasErrors={hasErrors}
+              onSave={handleSave}
+              onReset={handleReset}
+            />
           </div>
         </div>
 
         <div className="lg:col-span-2">
           <div className="lg:sticky lg:top-20">
             <DashboardCard
-              title="Preview"
-              description="Approximate render of the embed the live bot builds."
+              title="Live-style preview"
+              description="Approximates the embed and card rendered by the Railway bot."
             >
-              <WelcomePreview
-                config={config}
-                enabled={enabled}
-                serverName={guildName}
-              />
+              <WelcomePreview config={config} serverName={guildName} />
             </DashboardCard>
           </div>
         </div>

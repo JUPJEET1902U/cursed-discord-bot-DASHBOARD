@@ -2,14 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   PartyPopper,
-  DoorOpen,
   Drama,
-  Bot,
-  ShieldCheck,
-  ScrollText,
-  Settings,
-  BarChart3,
-  Crown,
+  SlidersHorizontal,
 } from "lucide-react";
 
 export interface NavItem {
@@ -19,20 +13,12 @@ export interface NavItem {
 }
 
 /**
- * Single source of truth for guild-scoped dashboard navigation. Sidebar and
- * MobileNav both render from this list — add a page once here and it shows
- * up in both places consistently. (Each page's `PageHeader` sets its own
- * `title`/`breadcrumb` explicitly rather than deriving it from this list.)
+ * Guild-scoped dashboard navigation. Only pages backed by the live Railway bot
+ * API are shown, so users never land on controls that cannot save anything.
  */
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
+  { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
   { label: "Welcome", href: "/dashboard/welcome", icon: PartyPopper },
-  { label: "Goodbye", href: "/dashboard/goodbye", icon: DoorOpen },
   { label: "Autorole", href: "/dashboard/autorole", icon: Drama },
-  { label: "AI Settings", href: "/dashboard/ai-settings", icon: Bot },
-  { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
-  { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
-  { label: "Server Settings", href: "/dashboard/settings", icon: Settings },
-  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { label: "Premium", href: "/dashboard/premium", icon: Crown },
 ];

@@ -2,41 +2,46 @@ import { z } from "zod";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 const SNOWFLAKE = /^\d{17,20}$/;
+const nullableUrl = z
+  .string()
+  .max(2048, "URL is too long.")
+  .refine((value) => value === "" || /^https?:\/\/\S+$/i.test(value), {
+    message: "Enter a valid http(s) URL or leave it blank.",
+  })
+  .nullable();
 
-/**
- * Validates the exact flat `WelcomeConfig` shape (see `@/types/welcome`) —
- * the same top-level fields stored on the `guildConfigs` document and read
- * by the live bot's GuildConfigStore. There is no separate "enabled" flag
- * or nested "embed" object here: the bot treats welcome as enabled when
- * `welcomeChannelId` is set, and the embed is simply built from these same
- * top-level fields.
- */
-export const welcomeConfigSchema = z.object({
-  welcomeChannelId: z
-    .string()
-    .regex(SNOWFLAKE, "Invalid channel ID.")
-    .nullable(),
-  welcomeMessage: z
-    .string()
-    .max(2000, "Message must be 2000 characters or fewer.")
-    .nullable(),
-  welcomeUseAI: z.boolean(),
-  welcomeColor: z
-    .string()
-    .regex(HEX_COLOR, "Color must be a hex value, e.g. #7C3AED.")
-    .nullable(),
-  welcomeThumbnail: z.boolean(),
-  welcomeImageUrl: z
-    .string()
-    .max(2048, "Image URL is too long.")
-    .refine((val) => val === "" || /^https?:\/\/\S+$/i.test(val), {
-      message: "Image URL must be empty or a valid http(s) URL.",
-    })
-    .nullable(),
-  welcomeFooter: z
-    .string()
-    .max(2048, "Footer text must be 2048 characters or fewer.")
-    .nullable(),
-});
+export const welcomeConfigSchema = z
+  .object({
+    welcomeEnabled: z.boolean(),
+    welcomeChannelId: z.string().regex(SNOWFLAKE, "Invalid channel ID.").nullable(),
+    welcomeMessage: z
+      .string()
+      .max(2000, "Message must be 2000 characters or fewer.")
+      .nullable(),
+    welcomeUseAI: z.boolean(),
+    welcomeColor: z
+      .string()
+      .regex(HEX_COLOR, "Color must be a hex value, e.g. #7C3AED.")
+      .nullable(),
+    welcomeThumbnail: z.boolean(),
+    welcomeImageUrl: nullableUrl,
+    welcomeFooter: z
+      .string()
+      .max(2048, "Footer text must be 2048 characters or fewer.")
+      .nullable(),
+    welcomeCardEnabled: z.boolean(),
+    welcomeCardTheme: z.enum(["classic", "midnight", "neon"]),
+    welcomeCardBackground: nullableUrl,
+    welcomeAccentColor: z
+      .string()
+      .regex(HEX_COLOR, "Accent must be a hex value, e.g. #A855F7.")
+      .nullable(),
+    welcomeMediaUrl: nullableUrl,
+  })
+  .strict()
+  .refine((value) => !value.welcomeEnabled || Boolean(value.welcomeChannelId), {
+    path: ["welcomeChannelId"],
+    message: "Choose a welcome channel before enabling welcome messages.",
+  });
 
 export type WelcomeConfigInput = z.infer<typeof welcomeConfigSchema>;
