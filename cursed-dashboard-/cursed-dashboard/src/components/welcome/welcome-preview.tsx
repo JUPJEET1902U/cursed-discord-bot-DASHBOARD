@@ -6,33 +6,32 @@ import { substituteWelcomeVariables } from "@/lib/welcome-variables";
 
 interface WelcomePreviewProps {
   config: WelcomeConfig;
-  enabled: boolean;
+  enabled?: boolean;
   serverName: string;
 }
 
 const SAMPLE = (serverName: string) => ({
   user: "NewMember",
+  username: "NewMember",
   mention: "@NewMember",
   server: serverName,
   membercount: "1,284",
 });
 
-/**
- * Renders a Discord-message-shaped mock — never an actual send, just a
- * visual approximation so people can see what their config will look like
- * before saving. Purely presentational; no network calls.
- *
- * Built from the same flat `WelcomeConfig` fields the live bot reads: there
- * is no separate "embed enabled" flag or "mention user" toggle in that
- * shape, so the embed box is always shown (built from welcomeColor /
- * welcomeThumbnail / welcomeImageUrl / welcomeFooter) and mentions are
- * whatever the message text itself includes via the {mention} variable.
- */
+const themeBackground: Record<WelcomeConfig["welcomeCardTheme"], string> = {
+  classic: "linear-gradient(135deg, #111827, #1f2937)",
+  midnight: "linear-gradient(135deg, #020617, #172554)",
+  neon: "linear-gradient(135deg, #12001F, #111827)",
+};
+
 export function WelcomePreview({ config, enabled, serverName }: WelcomePreviewProps) {
+  const active = enabled ?? config.welcomeEnabled;
   const sample = SAMPLE(serverName);
-  const sub = (t: string) => substituteWelcomeVariables(t, sample);
+  const sub = (text: string) => substituteWelcomeVariables(text, sample);
   const content = sub(config.welcomeMessage || BOT_DEFAULT_WELCOME_MESSAGE);
   const embedColor = config.welcomeColor ?? "#5865F2";
+  const accent = config.welcomeAccentColor ?? embedColor;
+  const cardBackground = config.welcomeCardBackground || config.welcomeMediaUrl;
 
   return (
     <div className="rounded-xl bg-[#313338] p-4 font-body">
@@ -43,16 +42,13 @@ export function WelcomePreview({ config, enabled, serverName }: WelcomePreviewPr
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-semibold text-white">CURSED</span>
-            <span className="rounded bg-violet px-1 py-[1px] text-[10px] font-medium text-white">
-              BOT
-            </span>
+            <span className="rounded bg-violet px-1 py-[1px] text-[10px] font-medium text-white">BOT</span>
             <span className="text-xs text-[#949BA4]">Today at 12:00 PM</span>
           </div>
 
-          {!enabled ? (
+          {!active ? (
             <div className="mt-0.5 text-sm italic text-[#949BA4]">
-              Welcome messages are disabled — nothing will be posted when
-              someone joins.
+              Welcome messages are disabled — nothing will be posted when someone joins.
             </div>
           ) : (
             <>
@@ -65,30 +61,58 @@ export function WelcomePreview({ config, enabled, serverName }: WelcomePreviewPr
                 style={{ borderColor: embedColor }}
               >
                 <div className="min-w-0 flex-1">
+                  <p className="mb-2 text-sm font-semibold text-white">👋 Welcome to {serverName}!</p>
+                  {config.welcomeCardEnabled ? (
+                    <div
+                      className="relative mb-2 overflow-hidden rounded-lg border border-white/10 p-4"
+                      style={{
+                        backgroundImage: cardBackground
+                          ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)), url(${cardBackground})`
+                          : themeBackground[config.welcomeCardTheme],
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }}
+                    >
+                      <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: accent }} />
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 bg-black/30 text-xs font-semibold text-white"
+                          style={{ borderColor: accent }}
+                        >
+                          avatar
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold tracking-[0.18em]" style={{ color: accent }}>WELCOME</p>
+                          <p className="truncate text-xl font-extrabold text-white">NewMember</p>
+                          <p className="truncate text-xs text-white/75">to {serverName}</p>
+                          <p className="mt-2 text-[10px] text-white/70">Member #1,284</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {config.welcomeImageUrl ? (
                     <div className="overflow-hidden rounded-md border border-white/10">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary user-provided remote URL, not a static asset */}
+                      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary user URL */}
                       <img
                         src={config.welcomeImageUrl}
                         alt=""
                         className="max-h-48 w-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
+                        onError={(event) => {
+                          (event.target as HTMLImageElement).style.display = "none";
                         }}
                       />
                     </div>
                   ) : null}
                   {config.welcomeFooter ? (
-                    <p className="mt-2 text-xs text-[#949BA4]">
-                      {sub(config.welcomeFooter)}
-                    </p>
-                  ) : null}
+                    <p className="mt-2 text-xs text-[#949BA4]">{sub(config.welcomeFooter)}</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-[#949BA4]">Member #1,284</p>
+                  )}
                 </div>
                 {config.welcomeThumbnail ? (
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-violet-dim to-crimson-dim">
-                    <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-white/70">
-                      icon
-                    </div>
+                    <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-white/70">avatar</div>
                   </div>
                 ) : null}
               </div>
