@@ -38,6 +38,7 @@ export const welcomeConfigSchema = z
       .nullable(),
     welcomeMediaUrl: nullableUrl,
   })
+  .strict()
   .refine((value) => !value.welcomeEnabled || Boolean(value.welcomeChannelId), {
     path: ["welcomeChannelId"],
     message: "Choose a welcome channel before enabling welcome messages.",
