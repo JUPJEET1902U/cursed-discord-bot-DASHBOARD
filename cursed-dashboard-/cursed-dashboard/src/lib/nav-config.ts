@@ -4,6 +4,7 @@ import {
   PartyPopper,
   Drama,
   SlidersHorizontal,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -19,6 +20,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
+  { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
   { label: "Welcome", href: "/dashboard/welcome", icon: PartyPopper },
   { label: "Autorole", href: "/dashboard/autorole", icon: Drama },
 ];
