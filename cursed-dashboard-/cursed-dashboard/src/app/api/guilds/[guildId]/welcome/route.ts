@@ -31,9 +31,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const data = await botApiRequest<BotWelcomeData>(
-      `guilds/${guildId}/welcome`
-    );
+    const data = await botApiRequest<BotWelcomeData>(`guilds/${guildId}/welcome`);
     return NextResponse.json({
       config: data.config,
       channels: data.channels.map(toDiscordChannel),
@@ -55,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   let config: WelcomeConfig;
   try {
-    config = welcomeConfigSchema.strict().parse(bodyResult.body);
+    config = welcomeConfigSchema.parse(bodyResult.body);
   } catch (error) {
     if (error instanceof ZodError) return zodErrorResponse(error);
     throw error;
