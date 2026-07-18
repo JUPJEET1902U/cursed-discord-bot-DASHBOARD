@@ -11,19 +11,6 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import { CursedLogo } from "@/components/marketing/cursed-logo";
 import { cn } from "@/lib/utils";
 
-/**
- * Mobile equivalent of Sidebar — a hamburger button that opens a slide-over
- * drawer with the same NAV_ITEMS list. Only rendered below the `lg`
- * breakpoint (Sidebar takes over above it).
- *
- * Built on Radix's Dialog primitive rather than a hand-rolled overlay so
- * focus trapping, Escape-to-close, background scroll lock, and
- * aria-modal/aria-labelledby wiring all come for free instead of being
- * reimplemented (and inevitably drifting from) what Radix already does
- * correctly. `forceMount` + `AnimatePresence` keeps the existing
- * slide/fade animation; `useReducedMotion` skips it for anyone who's asked
- * their OS to reduce motion.
- */
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -93,6 +80,7 @@ export function MobileNav() {
                       <Link
                         key={item.href}
                         href={item.href as Route}
+                        prefetch={false}
                         onClick={() => setOpen(false)}
                         className={cn(
                           "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
