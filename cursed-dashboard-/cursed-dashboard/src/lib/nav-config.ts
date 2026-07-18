@@ -6,6 +6,7 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   ShieldAlert,
+  Siren,
 } from "lucide-react";
 
 export interface NavItem {
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
   { label: "Advanced Moderation", href: "/dashboard/moderation-advanced", icon: ShieldAlert },
+  { label: "Server Protection", href: "/dashboard/security", icon: Siren },
   { label: "Welcome", href: "/dashboard/welcome", icon: PartyPopper },
   { label: "Autorole", href: "/dashboard/autorole", icon: Drama },
 ];
