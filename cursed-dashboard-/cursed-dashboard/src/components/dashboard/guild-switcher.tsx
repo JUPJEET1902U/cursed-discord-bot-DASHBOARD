@@ -25,7 +25,7 @@ function GuildIcon({ name, iconUrl }: { name: string; iconUrl: string | null }) 
   }
   const initials = name
     .split(/\s+/)
-    .map((w) => w[0])
+    .map((word) => word[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
@@ -36,13 +36,7 @@ function GuildIcon({ name, iconUrl }: { name: string; iconUrl: string | null }) 
   );
 }
 
-/**
- * Displays the active guild (from GuildContext — server-verified, never
- * re-derived client-side) with a menu to jump back to the server-selection
- * page. Switching guilds always goes through `/dashboard`, which re-runs
- * the same permission check `selectServer` does — this component never
- * sets the guild cookie itself.
- */
+/** Displays the active guild and opens the verified server-selection page. */
 export function GuildSwitcher() {
   const guild = useGuild();
 
@@ -66,7 +60,7 @@ export function GuildSwitcher() {
           </div>
         </div>
         <DropdownMenuItem asChild>
-          <Link href="/dashboard">
+          <Link href="/dashboard" prefetch={false}>
             <RefreshCw className="h-4 w-4" />
             Switch server
           </Link>
