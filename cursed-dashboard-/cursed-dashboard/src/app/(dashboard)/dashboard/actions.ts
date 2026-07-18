@@ -3,28 +3,22 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { fetchInternal } from "@/lib/api";
 import { SELECTED_GUILD_COOKIE } from "@/lib/guild";
-import type { ManageableGuild } from "@/types/discord";
+
+const SNOWFLAKE = /^\d{17,20}$/;
 
 export async function selectServer(formData: FormData) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   const guildId = formData.get("guildId");
-  if (typeof guildId !== "string" || !guildId) {
+  if (typeof guildId !== "string" || !SNOWFLAKE.test(guildId)) {
     redirect("/dashboard?error=invalid_selection");
   }
 
-  const response = await fetchInternal("/api/servers");
-  if (!response.ok) redirect("/dashboard?error=fetch_failed");
-
-  const { guilds } = (await response.json()) as { guilds: ManageableGuild[] };
-  const guild = guilds.find((item) => item.id === guildId);
-  if (!guild) redirect("/dashboard?error=access_denied");
-  if (guild.botIsMember === false) redirect("/dashboard?error=bot_not_added");
-  if (guild.botIsMember === null) redirect("/dashboard?error=bot_unavailable");
-
+  // The selected-guild cookie is only a navigation hint. Guild pages and every
+  // write API independently re-verify Discord access, so repeating the full
+  // Discord + Railway server-list request here only made switching slower.
   const cookieStore = await cookies();
   cookieStore.set(SELECTED_GUILD_COOKIE, guildId, {
     httpOnly: true,
