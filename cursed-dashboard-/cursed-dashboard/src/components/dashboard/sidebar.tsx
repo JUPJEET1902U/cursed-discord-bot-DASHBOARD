@@ -8,11 +8,7 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import { CursedLogo } from "@/components/marketing/cursed-logo";
 import { cn } from "@/lib/utils";
 
-/**
- * Fixed desktop sidebar. Renders from `NAV_ITEMS` (src/lib/nav-config.ts)
- * so adding a page to that one list is enough to wire it in here, in
- * MobileNav, and in PageHeader's breadcrumb.
- */
+/** Fixed desktop sidebar rendered from the shared guild navigation list. */
 export function Sidebar() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
@@ -34,6 +30,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href as Route}
+              prefetch={false}
               className={cn(
                 "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive

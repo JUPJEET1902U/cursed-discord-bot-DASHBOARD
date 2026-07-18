@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus, ServerCrash } from "lucide-react";
 import { selectServer } from "@/app/(dashboard)/dashboard/actions";
 import { Button } from "@/components/ui/button";
+import { ServerSelectButton } from "@/components/dashboard/server-select-button";
 import { cn } from "@/lib/utils";
 import type { ManageableGuild } from "@/types/discord";
 
@@ -64,7 +65,7 @@ export function ServerCard({ guild, isSelected }: ServerCardProps) {
       <div className={cardClass}>
         <ServerIdentity guild={guild} />
         <Button asChild size="sm">
-          <Link href={inviteHref}>
+          <Link href={inviteHref} prefetch={false}>
             <Plus className="h-4 w-4" />
             Add
           </Link>
@@ -85,10 +86,7 @@ export function ServerCard({ guild, isSelected }: ServerCardProps) {
   return (
     <form action={selectServer}>
       <input type="hidden" name="guildId" value={guild.id} />
-      <button
-        type="submit"
-        className={cn(cardClass, "glass-hover group transition-all")}
-      >
+      <ServerSelectButton className={cn(cardClass, "glass-hover group transition-all")}>
         <ServerIdentity guild={guild} />
         <span
           className={cn(
@@ -100,7 +98,7 @@ export function ServerCard({ guild, isSelected }: ServerCardProps) {
         >
           {isSelected ? "Selected" : "Select"}
         </span>
-      </button>
+      </ServerSelectButton>
     </form>
   );
 }
