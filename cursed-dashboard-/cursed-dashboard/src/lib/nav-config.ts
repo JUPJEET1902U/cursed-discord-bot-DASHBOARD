@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Siren,
+  Command,
 } from "lucide-react";
 
 export interface NavItem {
@@ -22,6 +23,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
+  { label: "Command Prefix", href: "/dashboard/prefix", icon: Command },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
   { label: "Advanced Moderation", href: "/dashboard/moderation-advanced", icon: ShieldAlert },
   { label: "Server Protection", href: "/dashboard/security", icon: Siren },
