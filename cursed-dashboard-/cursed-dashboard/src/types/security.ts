@@ -8,7 +8,9 @@ export type TrustedScope =
   | "manageRoles"
   | "addBots"
   | "manageWebhooks"
-  | "manualModeration";
+  | "manualModeration"
+  | "tamperProtection"
+  | "staffLimits";
 
 export interface TrustedEntry {
   subjectType: TrustedSubjectType;
