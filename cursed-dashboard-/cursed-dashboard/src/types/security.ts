@@ -1,4 +1,4 @@
-export type SecurityResponseAction = "alert" | "quarantine" | "lockdown";
+export type SecurityResponseAction = "alert" | "quarantine" | "lockdown" | "neutralize";
 export type TrustedSubjectType = "user" | "role" | "bot" | "channel";
 export type TrustedScope =
   | "automod"
@@ -31,15 +31,37 @@ export interface SecurityConfig {
     enabled: boolean;
     action: SecurityResponseAction;
     windowSeconds: number;
+    restoreDeletedChannels: boolean;
+    restoreDeletedRoles: boolean;
+    removeDangerousRoles: boolean;
+    banMaliciousBots: boolean;
+    autoLockdown: boolean;
+    ownerAlerts: boolean;
+    neutralizeTimeoutMinutes: number;
     thresholds: {
       bans: number;
       kicks: number;
       channelDeletes: number;
+      channelCreates: number;
+      channelUpdates: number;
       roleDeletes: number;
+      roleCreates: number;
+      roleUpdates: number;
       webhookChanges: number;
       dangerousRoleChanges: number;
       botAdds: number;
+      guildUpdates: number;
     };
+  };
+  messageShield: {
+    enabled: boolean;
+    windowSeconds: number;
+    repeatedMessageThreshold: number;
+    rapidMessageThreshold: number;
+    botInviteThreshold: number;
+    inviteThreshold: number;
+    linkThreshold: number;
+    maxMentions: number;
   };
   quarantine: {
     enabled: boolean;
@@ -80,6 +102,8 @@ export interface SecurityRole {
 export interface SecurityBotPermissions {
   manageChannels: boolean;
   manageRoles: boolean;
+  manageWebhooks: boolean;
+  manageMessages: boolean;
   viewAuditLog: boolean;
   moderateMembers: boolean;
   kickMembers: boolean;

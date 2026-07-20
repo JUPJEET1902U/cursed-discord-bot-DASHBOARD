@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { securityConfigSchema } from "@/lib/validation/security";
 import type {
@@ -32,8 +31,10 @@ const scopes: Array<[TrustedScope, string]> = [
 ];
 const thresholds: Array<[keyof SecurityConfig["antiNuke"]["thresholds"], string, number]> = [
   ["bans", "Bans", 50], ["kicks", "Kicks", 50], ["channelDeletes", "Channel deletes", 25],
-  ["roleDeletes", "Role deletes", 25], ["webhookChanges", "Webhook changes", 25],
-  ["dangerousRoleChanges", "Dangerous role changes", 25], ["botAdds", "Bot additions", 25],
+  ["channelCreates", "Channel creates", 50], ["channelUpdates", "Channel edits", 50],
+  ["roleDeletes", "Role deletes", 25], ["roleCreates", "Role creates", 50], ["roleUpdates", "Role edits", 50],
+  ["webhookChanges", "Webhook changes", 25], ["dangerousRoleChanges", "Dangerous permissions", 25],
+  ["botAdds", "Bot additions", 25], ["guildUpdates", "Server setting edits", 25],
 ];
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
@@ -45,6 +46,15 @@ function Toggle({ id, label, description, checked, onChange }: {
     <div><Label htmlFor={id}>{label}</Label><p className="mt-0.5 text-xs text-ash">{description}</p></div>
     <Switch id={id} checked={checked} onCheckedChange={onChange} />
   </div>;
+}
+
+function ResponseSelect({ value, onChange }: { value: SecurityResponseAction; onChange: (value: SecurityResponseAction) => void }) {
+  return <select className={`${selectClass} mt-1.5`} value={value} onChange={(event) => onChange(event.target.value as SecurityResponseAction)}>
+    <option value="neutralize">Neutralize attacker</option>
+    <option value="quarantine">Quarantine</option>
+    <option value="lockdown">Emergency lockdown</option>
+    <option value="alert">Alert only</option>
+  </select>;
 }
 
 export function SecurityEditor({ guildId, initialData }: Props) {
@@ -67,6 +77,39 @@ export function SecurityEditor({ guildId, initialData }: Props) {
   function patch(next: Partial<SecurityConfig>) { setConfig((current) => ({ ...current, ...next })) }
   function reset() { setConfig(clone(saved)); setError(null) }
 
+  function applyHardenedPreset() {
+    if (!window.confirm("Apply CURSED Hardened protection values? Review trusted users and bot hierarchy before saving.")) return;
+    setConfig((current) => ({
+      ...current,
+      enabled: true,
+      antiRaid: { ...current.antiRaid, enabled: true, joinThreshold: 6, windowSeconds: 15, minAccountAgeHours: 72, activeRaidSeconds: 300, action: "quarantine" },
+      antiNuke: {
+        ...current.antiNuke,
+        enabled: true,
+        action: "neutralize",
+        windowSeconds: 10,
+        restoreDeletedChannels: true,
+        restoreDeletedRoles: true,
+        removeDangerousRoles: true,
+        banMaliciousBots: true,
+        autoLockdown: true,
+        ownerAlerts: true,
+        neutralizeTimeoutMinutes: 10080,
+        thresholds: {
+          bans: 3, kicks: 3, channelDeletes: 1, channelCreates: 3, channelUpdates: 3,
+          roleDeletes: 1, roleCreates: 3, roleUpdates: 2, webhookChanges: 1,
+          dangerousRoleChanges: 1, botAdds: 1, guildUpdates: 2,
+        },
+      },
+      messageShield: {
+        enabled: true, windowSeconds: 8, repeatedMessageThreshold: 3, rapidMessageThreshold: 5,
+        botInviteThreshold: 2, inviteThreshold: 3, linkThreshold: 6, maxMentions: 5,
+      },
+      lockdown: { ...current.lockdown, enabled: true, raiseVerificationLevel: true },
+      trusted: { ...current.trusted, enabled: true },
+    }));
+  }
+
   async function save() {
     if (!validation.success || saving) return;
     setSaving(true); setError(null);
@@ -75,7 +118,7 @@ export function SecurityEditor({ guildId, initialData }: Props) {
       const body = await response.json() as SecurityData & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "Could not save settings.");
       setData(body); setConfig(clone(body.config)); setSaved(clone(body.config));
-      toast({ title: "Server Protection saved", description: "CURSED will use the updated rules.", variant: "success" });
+      toast({ title: "Server Protection saved", description: "CURSED will use the updated hardened rules.", variant: "success" });
     } catch (err) { setError(err instanceof Error ? err.message : "Could not save settings.") }
     finally { setSaving(false) }
   }
@@ -125,33 +168,57 @@ export function SecurityEditor({ guildId, initialData }: Props) {
     <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">{statItems.map(([label, value]) => <div key={label} className="glass rounded-xl p-4"><p className="text-[11px] uppercase tracking-wide text-ash">{label}</p><p className="mt-1 font-display text-lg font-semibold text-fog">{String(value)}</p></div>)}</div>
 
     <div className="space-y-6">
-      <DashboardCard title="Protection status" description="Phase 3 is disabled by default until you configure and enable it." action={<ShieldAlert className="h-5 w-5 text-violet-bright" />}>
-        <Toggle id="security-enabled" label="Enable Server Protection" description="Starts configured anti-raid and anti-nuke detection." checked={config.enabled} onChange={(enabled) => patch({ enabled })} />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <DashboardCard title="Protection status" description="Immediate audit-log response, attacker neutralization, recovery and coordinated spam defense." action={<ShieldAlert className="h-5 w-5 text-violet-bright" />}>
+        <Toggle id="security-enabled" label="Enable Server Protection" description="Arms anti-raid, anti-nuke and Message Shield." checked={config.enabled} onChange={(enabled) => patch({ enabled })} />
+        <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={applyHardenedPreset}>Apply hardened preset</Button><p className="self-center text-xs text-ash">Recommended: CURSED role above every non-owner staff and bot role.</p></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(data.botPermissions).filter(([key]) => key !== "botHighestRolePosition").map(([key, ready]) => <div key={key} className={`rounded-lg border px-3 py-2 text-xs ${ready ? "border-emerald-400/30 text-emerald-200" : "border-amber-400/30 text-amber-200"}`}>{ready ? "✓" : "!"} {key}</div>)}
         </div>
         <div className="mt-4"><Label>Security log channel</Label><select className={`${selectClass} mt-1.5`} value={config.securityLogChannelId ?? "none"} onChange={(event) => patch({ securityLogChannelId: event.target.value === "none" ? null : event.target.value })}><option value="none">No channel</option>{data.channels.map((channel) => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}</select></div>
       </DashboardCard>
 
-      <DashboardCard title="Anti-raid" description="Detect join bursts and suspicious new accounts." action={<Radar className="h-5 w-5 text-violet-bright" />}>
+      <DashboardCard title="Anti-raid" description="Detect join bursts, isolate suspicious accounts and keep raid mode active during an attack." action={<Radar className="h-5 w-5 text-violet-bright" />}>
         <Toggle id="anti-raid" label="Enable anti-raid" description="Uses a rolling join window and account-age check." checked={config.antiRaid.enabled} onChange={(enabled) => patch({ antiRaid: { ...config.antiRaid, enabled } })} />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div><Label>Join threshold</Label><Input className="mt-1.5" type="number" min={3} max={100} value={config.antiRaid.joinThreshold} onChange={(e) => patch({ antiRaid: { ...config.antiRaid, joinThreshold: Number(e.target.value) } })} /></div>
           <div><Label>Window seconds</Label><Input className="mt-1.5" type="number" min={5} max={300} value={config.antiRaid.windowSeconds} onChange={(e) => patch({ antiRaid: { ...config.antiRaid, windowSeconds: Number(e.target.value) } })} /></div>
           <div><Label>Minimum age hours</Label><Input className="mt-1.5" type="number" min={0} max={8760} value={config.antiRaid.minAccountAgeHours} onChange={(e) => patch({ antiRaid: { ...config.antiRaid, minAccountAgeHours: Number(e.target.value) } })} /></div>
           <div><Label>Raid active seconds</Label><Input className="mt-1.5" type="number" min={30} max={1800} value={config.antiRaid.activeRaidSeconds} onChange={(e) => patch({ antiRaid: { ...config.antiRaid, activeRaidSeconds: Number(e.target.value) } })} /></div>
-          <div><Label>Response</Label><select className={`${selectClass} mt-1.5`} value={config.antiRaid.action} onChange={(e) => patch({ antiRaid: { ...config.antiRaid, action: e.target.value as SecurityResponseAction } })}><option value="alert">Alert only</option><option value="quarantine">Quarantine</option><option value="lockdown">Lockdown</option></select></div>
+          <div><Label>Response</Label><ResponseSelect value={config.antiRaid.action} onChange={(action) => patch({ antiRaid: { ...config.antiRaid, action } })} /></div>
         </div>
       </DashboardCard>
 
-      <DashboardCard title="Anti-nuke" description="Correlates destructive events with fresh Discord audit-log entries.">
-        <Toggle id="anti-nuke" label="Enable anti-nuke" description="Protects against repeated bans, kicks, deletions, webhooks, bot additions and dangerous role changes." checked={config.antiNuke.enabled} onChange={(enabled) => patch({ antiNuke: { ...config.antiNuke, enabled } })} />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><Label>Window seconds</Label><Input className="mt-1.5" type="number" min={5} max={300} value={config.antiNuke.windowSeconds} onChange={(e) => patch({ antiNuke: { ...config.antiNuke, windowSeconds: Number(e.target.value) } })} /></div><div><Label>Response</Label><select className={`${selectClass} mt-1.5`} value={config.antiNuke.action} onChange={(e) => patch({ antiNuke: { ...config.antiNuke, action: e.target.value as SecurityResponseAction } })}><option value="alert">Alert only</option><option value="quarantine">Quarantine executor</option><option value="lockdown">Emergency lockdown</option></select></div></div>
+      <DashboardCard title="Anti-nuke and recovery" description="Responds to the first destructive action when configured, neutralizes the executor and can rebuild deleted channels or roles.">
+        <Toggle id="anti-nuke" label="Enable anti-nuke" description="Protects channels, roles, bans, kicks, webhooks, bot additions, permissions and server settings." checked={config.antiNuke.enabled} onChange={(enabled) => patch({ antiNuke: { ...config.antiNuke, enabled } })} />
+        <Toggle id="restore-channels" label="Restore deleted channels" description="Recreates deleted channels with their cached settings and overwrites." checked={config.antiNuke.restoreDeletedChannels} onChange={(restoreDeletedChannels) => patch({ antiNuke: { ...config.antiNuke, restoreDeletedChannels } })} />
+        <Toggle id="restore-roles" label="Restore deleted roles" description="Recreates deleted roles and restores their permissions where Discord allows." checked={config.antiNuke.restoreDeletedRoles} onChange={(restoreDeletedRoles) => patch({ antiNuke: { ...config.antiNuke, restoreDeletedRoles } })} />
+        <Toggle id="remove-dangerous" label="Strip dangerous roles" description="Removes editable roles carrying administrator or destructive permissions." checked={config.antiNuke.removeDangerousRoles} onChange={(removeDangerousRoles) => patch({ antiNuke: { ...config.antiNuke, removeDangerousRoles } })} />
+        <Toggle id="ban-bots" label="Ban malicious bots" description="Immediately bans a manageable bot identified as the attacker." checked={config.antiNuke.banMaliciousBots} onChange={(banMaliciousBots) => patch({ antiNuke: { ...config.antiNuke, banMaliciousBots } })} />
+        <Toggle id="auto-lockdown" label="Lock down during neutralization" description="Closes public chat while CURSED contains a destructive incident." checked={config.antiNuke.autoLockdown} onChange={(autoLockdown) => patch({ antiNuke: { ...config.antiNuke, autoLockdown } })} />
+        <Toggle id="owner-alerts" label="DM critical alerts to owner" description="Sends a direct emergency alert when a critical incident is recorded." checked={config.antiNuke.ownerAlerts} onChange={(ownerAlerts) => patch({ antiNuke: { ...config.antiNuke, ownerAlerts } })} />
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div><Label>Window seconds</Label><Input className="mt-1.5" type="number" min={5} max={300} value={config.antiNuke.windowSeconds} onChange={(e) => patch({ antiNuke: { ...config.antiNuke, windowSeconds: Number(e.target.value) } })} /></div>
+          <div><Label>Human timeout minutes</Label><Input className="mt-1.5" type="number" min={1} max={40320} value={config.antiNuke.neutralizeTimeoutMinutes} onChange={(e) => patch({ antiNuke: { ...config.antiNuke, neutralizeTimeoutMinutes: Number(e.target.value) } })} /></div>
+          <div><Label>Response</Label><ResponseSelect value={config.antiNuke.action} onChange={(action) => patch({ antiNuke: { ...config.antiNuke, action } })} /></div>
+        </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{thresholds.map(([key, label, max]) => <div key={key}><Label>{label}</Label><Input className="mt-1.5" type="number" min={1} max={max} value={config.antiNuke.thresholds[key]} onChange={(e) => patch({ antiNuke: { ...config.antiNuke, thresholds: { ...config.antiNuke.thresholds, [key]: Number(e.target.value) } } })} /></div>)}</div>
       </DashboardCard>
 
+      <DashboardCard title="Message Shield" description="Stops coordinated advert floods from users and bots before regular AutoMod processing.">
+        <Toggle id="message-shield" label="Enable Message Shield" description="Correlates rapid, repeated, invite, link and mass-mention messages." checked={config.messageShield.enabled} onChange={(enabled) => patch({ messageShield: { ...config.messageShield, enabled } })} />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div><Label>Window seconds</Label><Input className="mt-1.5" type="number" min={3} max={60} value={config.messageShield.windowSeconds} onChange={(e) => patch({ messageShield: { ...config.messageShield, windowSeconds: Number(e.target.value) } })} /></div>
+          <div><Label>Repeated messages</Label><Input className="mt-1.5" type="number" min={2} max={15} value={config.messageShield.repeatedMessageThreshold} onChange={(e) => patch({ messageShield: { ...config.messageShield, repeatedMessageThreshold: Number(e.target.value) } })} /></div>
+          <div><Label>Rapid messages</Label><Input className="mt-1.5" type="number" min={3} max={30} value={config.messageShield.rapidMessageThreshold} onChange={(e) => patch({ messageShield: { ...config.messageShield, rapidMessageThreshold: Number(e.target.value) } })} /></div>
+          <div><Label>Bot invite posts</Label><Input className="mt-1.5" type="number" min={1} max={10} value={config.messageShield.botInviteThreshold} onChange={(e) => patch({ messageShield: { ...config.messageShield, botInviteThreshold: Number(e.target.value) } })} /></div>
+          <div><Label>User invite posts</Label><Input className="mt-1.5" type="number" min={1} max={20} value={config.messageShield.inviteThreshold} onChange={(e) => patch({ messageShield: { ...config.messageShield, inviteThreshold: Number(e.target.value) } })} /></div>
+          <div><Label>Links in window</Label><Input className="mt-1.5" type="number" min={1} max={30} value={config.messageShield.linkThreshold} onChange={(e) => patch({ messageShield: { ...config.messageShield, linkThreshold: Number(e.target.value) } })} /></div>
+          <div><Label>Mentions per message</Label><Input className="mt-1.5" type="number" min={2} max={50} value={config.messageShield.maxMentions} onChange={(e) => patch({ messageShield: { ...config.messageShield, maxMentions: Number(e.target.value) } })} /></div>
+        </div>
+      </DashboardCard>
+
       <DashboardCard title="Quarantine and recovery" description="Saves restorable roles before isolation and restores them on release.">
-        <Toggle id="quarantine-enabled" label="Enable quarantine" description="Required for quarantine responses and commands." checked={config.quarantine.enabled} onChange={(enabled) => patch({ quarantine: { ...config.quarantine, enabled } })} />
+        <Toggle id="quarantine-enabled" label="Enable quarantine" description="Used by anti-raid and manual quarantine commands." checked={config.quarantine.enabled} onChange={(enabled) => patch({ quarantine: { ...config.quarantine, enabled } })} />
         <Toggle id="remove-roles" label="Remove manageable roles" description="Leaves managed or higher roles untouched and records the saved role list." checked={config.quarantine.removeManageableRoles} onChange={(removeManageableRoles) => patch({ quarantine: { ...config.quarantine, removeManageableRoles } })} />
         <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><Label>Quarantine role</Label><select className={`${selectClass} mt-1.5`} value={config.quarantine.roleId ?? "none"} onChange={(e) => patch({ quarantine: { ...config.quarantine, roleId: e.target.value === "none" ? null : e.target.value } })}><option value="none">Not configured</option>{data.roles.map((role) => <option key={role.id} value={role.id}>{role.name}{role.editable ? "" : " (above CURSED)"}</option>)}</select></div><div><Label>Quarantine channel</Label><select className={`${selectClass} mt-1.5`} value={config.quarantine.channelId ?? "none"} onChange={(e) => patch({ quarantine: { ...config.quarantine, channelId: e.target.value === "none" ? null : e.target.value } })}><option value="none">Not configured</option>{data.channels.map((channel) => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}</select></div></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto]"><Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Member Discord ID" /><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason" /><Button disabled={busy || !/^\d{17,20}$/.test(userId) || !reason.trim()} onClick={() => runAction({ action: "quarantine", userId: userId.trim(), reason: reason.trim() })}>Quarantine</Button><Button variant="outline" disabled={busy || !/^\d{17,20}$/.test(userId)} onClick={() => runAction({ action: "unquarantine", userId: userId.trim(), reason: reason.trim() || undefined })}>Release</Button></div>
@@ -174,7 +241,7 @@ export function SecurityEditor({ guildId, initialData }: Props) {
 
       <div className="flex justify-end"><EditorActions dirty={dirty} saving={saving} hasErrors={!validation.success} onSave={save} onReset={reset} /></div>
 
-      <DashboardCard title="Security incidents" description="MongoDB-backed anti-raid and anti-nuke detections.">
+      <DashboardCard title="Security incidents" description="MongoDB-backed anti-raid, anti-nuke and Message Shield detections.">
         <div className="max-h-[620px] space-y-3 overflow-y-auto">{data.incidents.map((incident) => <div key={incident.id ?? `${incident.type}:${incident.createdAt}`} className="rounded-xl border border-white/[0.08] p-4"><div className="flex justify-between gap-3"><div><p className="font-semibold text-fog">{incident.type.replaceAll("_", " ")}</p><p className="text-xs text-ash">{incident.executorTag} · {incident.actionTaken} · {incident.createdAt ? new Date(incident.createdAt).toLocaleString() : "Unknown time"}</p></div><span className="text-xs uppercase text-ash">{incident.status} · {incident.severity}</span></div><p className="mt-3 text-sm text-fog/90">{String(incident.details.summary ?? "Suspicious activity detected.")}</p>{incident.id ? <div className="mt-3 flex gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => updateIncident(incident.id!, { action: incident.status === "open" ? "resolve" : "reopen" })}>{incident.status === "open" ? "Resolve" : "Reopen"}</Button>{incident.status === "open" ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => updateIncident(incident.id!, { action: "ignore" })}>Ignore</Button> : null}</div> : null}</div>)}{!data.incidents.length ? <p className="rounded-xl border border-dashed border-white/10 p-8 text-center text-sm text-ash">No security incidents recorded.</p> : null}</div>
       </DashboardCard>
     </div>
