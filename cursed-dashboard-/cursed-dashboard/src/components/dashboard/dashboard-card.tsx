@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import type { PointerEvent, ReactNode } from "react";
+import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface DashboardCardProps {
@@ -10,9 +13,8 @@ interface DashboardCardProps {
 }
 
 /**
- * Base glass-panel card for dashboard content. StatCard, ComingSoon, and
- * any future feature-page panel should compose this rather than
- * reimplementing the glass/border/padding treatment.
+ * Premium glass panel with restrained pointer-driven depth. The interaction is
+ * visual only and is disabled for touch input and reduced-motion users.
  */
 export function DashboardCard({
   title,
@@ -21,24 +23,60 @@ export function DashboardCard({
   children,
   className,
 }: DashboardCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const card = cardRef.current;
+    if (!card) return;
+
+    const bounds = card.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height));
+    const rotateY = (x - 0.5) * 2.4;
+    const rotateX = (0.5 - y) * 2.0;
+
+    card.style.setProperty("--tilt-x", `${rotateX.toFixed(2)}deg`);
+    card.style.setProperty("--tilt-y", `${rotateY.toFixed(2)}deg`);
+    card.style.setProperty("--surface-x", `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty("--surface-y", `${(y * 100).toFixed(1)}%`);
+  }
+
+  function resetTilt() {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.setProperty("--tilt-x", "0deg");
+    card.style.setProperty("--tilt-y", "0deg");
+    card.style.setProperty("--surface-x", "50%");
+    card.style.setProperty("--surface-y", "50%");
+  }
+
   return (
-    <div className={cn("glass rounded-2xl p-5", className)}>
-      {title || action ? (
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            {title ? (
-              <h3 className="font-display text-sm font-semibold text-fog">
-                {title}
-              </h3>
-            ) : null}
-            {description ? (
-              <p className="mt-0.5 text-xs text-ash">{description}</p>
-            ) : null}
+    <div
+      ref={cardRef}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={resetTilt}
+      className={cn("glass glass-hover interactive-surface rounded-2xl p-5", className)}
+    >
+      <span aria-hidden="true" className="surface-sheen" />
+      <div className="relative z-[1]">
+        {title || action ? (
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              {title ? (
+                <h3 className="font-display text-sm font-semibold tracking-wide text-fog">
+                  {title}
+                </h3>
+              ) : null}
+              {description ? (
+                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ash">{description}</p>
+              ) : null}
+            </div>
+            {action ? <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.025] p-2">{action}</div> : null}
           </div>
-          {action ? <div className="shrink-0">{action}</div> : null}
-        </div>
-      ) : null}
-      {children}
+        ) : null}
+        {children}
+      </div>
     </div>
   );
 }
