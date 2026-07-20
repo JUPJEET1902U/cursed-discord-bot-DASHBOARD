@@ -47,10 +47,11 @@ export default async function SecurityPage() {
   const suiteData = suiteResponse.ok
     ? (await suiteResponse.json()) as SecuritySuiteData
     : null;
-  const suiteError = suiteData
-    ? null
-    : ((await suiteResponse.json().catch(() => null)) as { error?: string } | null)?.error
-      ?? "Deploy Bot PR #55 before using the Security Recovery Suite dashboard controls.";
+  let suiteError = "Deploy Bot PR #55 before using the Security Recovery Suite dashboard controls.";
+  if (!suiteData) {
+    const errorBody = (await suiteResponse.json().catch(() => null)) as { error?: string } | null;
+    if (errorBody?.error) suiteError = errorBody.error;
+  }
 
   return (
     <div>
