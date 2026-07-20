@@ -30,7 +30,7 @@ export function DashboardAmbient() {
   }, [reduceMotion]);
 
   return (
-    <div aria-hidden="true" className="dashboard-ambient pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden="true" className="dashboard-ambient pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <motion.div
         className="absolute -left-40 -top-48 h-[34rem] w-[34rem] rounded-full bg-violet/20 blur-[130px]"
         animate={reduceMotion ? undefined : { x: [0, 50, -15, 0], y: [0, 25, 55, 0], scale: [1, 1.08, 0.96, 1] }}
