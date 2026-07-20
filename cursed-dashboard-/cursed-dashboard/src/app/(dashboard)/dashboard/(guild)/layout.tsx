@@ -2,21 +2,9 @@ import { requireSelectedGuild } from "@/lib/guild";
 import { GuildProvider } from "@/components/dashboard/guild-context";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Navbar } from "@/components/dashboard/navbar";
+import { DashboardAmbient } from "@/components/dashboard/dashboard-ambient";
 
-/**
- * Wraps every guild-scoped page (Overview, Welcome, Moderation, ...). This
- * route group (`(guild)`) doesn't affect the URL — `/dashboard/overview`
- * still resolves the same way — it just lets this layout apply only to
- * these pages and not to `/dashboard` itself (the server-selection page,
- * which intentionally has no sidebar since there's no guild context yet).
- *
- * `requireSelectedGuild()` is the actual security boundary here: it reads
- * the guild cookie, re-verifies it against a fresh Discord fetch, and
- * redirects to `/dashboard` if there's no guild selected or the user no
- * longer manages it. Every page under this layout can assume `useGuild()`
- * returns a guild the current user is verified to manage right now — not
- * "was manageable whenever the cookie was set."
- */
+/** Guild-scoped dashboard shell. Data boundaries and route behavior are unchanged. */
 export default async function GuildLayout({
   children,
 }: {
@@ -26,12 +14,15 @@ export default async function GuildLayout({
 
   return (
     <GuildProvider guild={guild}>
-      <Sidebar />
-      <div className="lg:pl-64">
-        <Navbar />
-        <main className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
-          {children}
-        </main>
+      <div className="relative min-h-screen overflow-x-clip">
+        <DashboardAmbient />
+        <Sidebar />
+        <div className="relative lg:pl-72">
+          <Navbar />
+          <main className="mx-auto max-w-[1480px] px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pb-20 lg:pt-8">
+            <div className="relative">{children}</div>
+          </main>
+        </div>
       </div>
     </GuildProvider>
   );
