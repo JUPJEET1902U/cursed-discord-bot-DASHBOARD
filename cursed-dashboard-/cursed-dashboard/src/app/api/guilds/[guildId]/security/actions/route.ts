@@ -4,6 +4,7 @@ import { verifyGuildManageAccess } from "@/lib/guild-auth";
 import { botApiRequest } from "@/lib/bot-api";
 import { botApiErrorResponse } from "@/lib/bot-api-route";
 import { readJsonBody, zodErrorResponse } from "@/lib/api-route-helpers";
+import { coreSecurityData } from "@/lib/security-core-data";
 import { securityActionSchema } from "@/lib/validation/security";
 import type { SecurityActionRequest, SecurityData } from "@/types/security";
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const data = await botApiRequest<{ result: unknown; data: SecurityData }>(
+    const response = await botApiRequest<{ result: unknown; data: SecurityData }>(
       `guilds/${guildId}/security/actions`,
       {
         method: "POST",
@@ -39,7 +40,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         body: JSON.stringify(action),
       }
     );
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...response,
+      data: coreSecurityData(response.data),
+    });
   } catch (error) {
     return botApiErrorResponse(error, "Server Protection action failed safely.");
   }
