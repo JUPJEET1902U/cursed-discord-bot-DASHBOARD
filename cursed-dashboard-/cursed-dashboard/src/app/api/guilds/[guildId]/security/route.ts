@@ -4,6 +4,7 @@ import { verifyGuildManageAccess } from "@/lib/guild-auth";
 import { botApiRequest } from "@/lib/bot-api";
 import { botApiErrorResponse } from "@/lib/bot-api-route";
 import { readJsonBody, zodErrorResponse } from "@/lib/api-route-helpers";
+import { coreSecurityData } from "@/lib/security-core-data";
 import { securityConfigSchema } from "@/lib/validation/security";
 import type { SecurityConfig, SecurityData } from "@/types/security";
 
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   try {
     const data = await botApiRequest<SecurityData>(`guilds/${guildId}/security`);
-    return NextResponse.json(data);
+    return NextResponse.json(coreSecurityData(data));
   } catch (error) {
     return botApiErrorResponse(error, "Could not load Server Protection settings.");
   }
@@ -49,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
       body: JSON.stringify(config),
     });
-    return NextResponse.json(data);
+    return NextResponse.json(coreSecurityData(data));
   } catch (error) {
     return botApiErrorResponse(error, "Could not save Server Protection settings.");
   }
