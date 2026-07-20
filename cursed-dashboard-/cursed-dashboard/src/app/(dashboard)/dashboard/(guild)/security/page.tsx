@@ -4,13 +4,18 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RetryButton } from "@/components/shared/retry-button";
 import { SecurityEditor } from "@/components/security/security-editor";
+import { SecurityRecoverySuite } from "@/components/security/security-recovery-suite";
 import { fetchInternal } from "@/lib/api";
 import { requireSelectedGuild } from "@/lib/guild";
 import type { SecurityData } from "@/types/security";
+import type { SecuritySuiteData } from "@/types/security-suite";
 
 export default async function SecurityPage() {
   const guild = await requireSelectedGuild();
-  const response = await fetchInternal(`/api/guilds/${guild.id}/security`);
+  const [response, suiteResponse] = await Promise.all([
+    fetchInternal(`/api/guilds/${guild.id}/security`),
+    fetchInternal(`/api/guilds/${guild.id}/security-suite`),
+  ]);
 
   if (response.status === 401 || response.status === 403) redirect("/dashboard");
   if (!response.ok) {
@@ -39,14 +44,34 @@ export default async function SecurityPage() {
   }
 
   const data = (await response.json()) as SecurityData;
+  const suiteData = suiteResponse.ok
+    ? (await suiteResponse.json()) as SecuritySuiteData
+    : null;
+  const suiteError = suiteData
+    ? null
+    : ((await suiteResponse.json().catch(() => null)) as { error?: string } | null)?.error
+      ?? "Deploy Bot PR #55 before using the Security Recovery Suite dashboard controls.";
+
   return (
     <div>
       <PageHeader
         title="Server Protection"
         breadcrumb="Server Protection"
-        description="Configure anti-raid and anti-nuke thresholds, quarantine recovery, emergency lockdown, trusted scopes, and incident handling."
+        description="Configure anti-raid, anti-nuke, recovery snapshots, tamper protection, incident mode, staff limits and forensic reporting."
       />
       <SecurityEditor guildId={guild.id} initialData={data} />
+      {suiteData ? (
+        <SecurityRecoverySuite guildId={guild.id} initialData={suiteData} />
+      ) : (
+        <div className="mt-8">
+          <EmptyState
+            icon={ShieldAlert}
+            title="Security Recovery Suite unavailable"
+            description={suiteError}
+            action={<RetryButton />}
+          />
+        </div>
+      )}
     </div>
   );
 }
