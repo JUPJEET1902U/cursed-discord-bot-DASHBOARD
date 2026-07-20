@@ -2,28 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --cursor-x: 50vw;
+  --cursor-y: 20vh;
+}
+
 @layer base {
   ::selection {
-    @apply bg-violet/30 text-fog;
+    @apply bg-violet/40 text-fog;
   }
 
   html {
     scroll-behavior: smooth;
+    background: #07070b;
   }
 
   body {
-    @apply bg-void text-fog font-body antialiased;
+    @apply min-h-screen bg-void text-fog font-body antialiased;
+    background-image:
+      radial-gradient(circle at 12% -10%, rgba(124, 58, 237, 0.16), transparent 34rem),
+      radial-gradient(circle at 105% 25%, rgba(220, 20, 60, 0.08), transparent 30rem),
+      linear-gradient(180deg, #08080d 0%, #0a0910 48%, #07070b 100%);
   }
 
   h1, h2, h3, h4 {
     @apply font-display;
   }
 
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  select option {
+    background: #131318;
+    color: #e7e7ec;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(168, 85, 247, 0.35) rgba(255, 255, 255, 0.03);
+  }
+
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(rgba(168, 85, 247, 0.46), rgba(220, 20, 60, 0.3)) padding-box;
+  }
+
   /* Visible keyboard focus everywhere — accessibility floor */
   :focus-visible {
     outline: 2px solid theme("colors.violet.bright");
-    outline-offset: 2px;
-    border-radius: 4px;
+    outline-offset: 3px;
+    border-radius: 8px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -37,16 +76,123 @@
 }
 
 @layer components {
-  /* Glassmorphism surface used across cards, nav, modals */
+  /* Premium glass surface shared by cards, navigation and modals. */
   .glass {
-    @apply bg-ink/60 backdrop-blur-xl border border-white/[0.06] shadow-glass;
+    @apply border border-white/[0.07] bg-ink/60 backdrop-blur-2xl;
+    background-image: linear-gradient(145deg, rgba(255,255,255,0.055), rgba(255,255,255,0.012) 42%, rgba(124,58,237,0.035));
+    box-shadow:
+      0 18px 55px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      inset 0 -1px 0 rgba(124, 58, 237, 0.04);
   }
 
   .glass-hover {
-    @apply transition-colors duration-200 hover:border-violet/40 hover:bg-ink/80;
+    @apply transition-all duration-300 hover:border-violet/35 hover:bg-ink/80;
+    will-change: transform, border-color, box-shadow;
+  }
+
+  .glass-hover:hover {
+    box-shadow:
+      0 24px 70px rgba(0, 0, 0, 0.42),
+      0 0 0 1px rgba(168, 85, 247, 0.07),
+      0 0 35px rgba(124, 58, 237, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  .interactive-surface {
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+    --surface-x: 50%;
+    --surface-y: 50%;
+    position: relative;
+    isolation: isolate;
+    transform-style: preserve-3d;
+    transform: perspective(1100px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(0);
+    transition: transform 220ms ease, border-color 300ms ease, box-shadow 300ms ease;
+  }
+
+  .interactive-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(circle at var(--surface-x) var(--surface-y), rgba(168, 85, 247, 0.13), transparent 42%);
+    transition: opacity 260ms ease;
+  }
+
+  .interactive-surface:hover::before {
+    opacity: 1;
+  }
+
+  .surface-sheen {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .surface-sheen::after {
+    content: "";
+    position: absolute;
+    left: -28%;
+    top: -60%;
+    width: 38%;
+    height: 220%;
+    opacity: 0;
+    transform: rotate(20deg) translateX(-190%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.075), transparent);
+    transition: transform 700ms ease, opacity 300ms ease;
+  }
+
+  .interactive-surface:hover .surface-sheen::after {
+    opacity: 1;
+    transform: rotate(20deg) translateX(420%);
+  }
+
+  .dashboard-grid {
+    opacity: 0.42;
+    background-image:
+      linear-gradient(rgba(124, 58, 237, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124, 58, 237, 0.055) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, black 0%, rgba(0,0,0,0.5) 48%, transparent 100%);
+  }
+
+  .dashboard-cursor-light {
+    background: radial-gradient(26rem circle at var(--cursor-x) var(--cursor-y), rgba(124, 58, 237, 0.11), transparent 68%);
+    transition: background 80ms linear;
+  }
+
+  .dashboard-vignette {
+    background: radial-gradient(ellipse at center, transparent 36%, rgba(5, 5, 9, 0.58) 100%);
+  }
+
+  .nav-capsule {
+    @apply border border-white/[0.075] bg-ink/70 backdrop-blur-2xl;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
   .text-gradient-cursed {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-bright via-violet to-crimson;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-bright via-violet to-crimson-bright;
+  }
+
+  .premium-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(168,85,247,0.34), rgba(220,20,60,0.18), transparent);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .interactive-surface {
+    transform: none !important;
+  }
+
+  .dashboard-cursor-light {
+    display: none;
   }
 }
