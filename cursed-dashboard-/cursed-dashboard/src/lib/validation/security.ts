@@ -14,12 +14,14 @@ export const trustedScopeSchema = z.enum([
   "addBots",
   "manageWebhooks",
   "manualModeration",
+  "tamperProtection",
+  "staffLimits",
 ]);
 
 export const trustedEntrySchema = z.object({
   subjectType: trustedSubjectTypeSchema,
   subjectId: snowflake,
-  scopes: z.array(trustedScopeSchema).max(8),
+  scopes: z.array(trustedScopeSchema).max(10),
 }).strict();
 
 export const securityConfigSchema = z.object({

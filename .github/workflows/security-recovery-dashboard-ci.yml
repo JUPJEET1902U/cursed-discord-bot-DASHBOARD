@@ -1,0 +1,27 @@
+name: Security Recovery Dashboard CI
+
+on:
+  pull_request:
+    paths:
+      - "cursed-dashboard-/cursed-dashboard/src/types/security-suite.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/lib/validation/security-suite.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/components/security/security-recovery-suite.tsx"
+      - "cursed-dashboard-/cursed-dashboard/src/app/api/guilds/[guildId]/security-suite/route.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/app/(dashboard)/dashboard/(guild)/security/page.tsx"
+      - ".github/workflows/security-recovery-dashboard-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cursed-dashboard-/cursed-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cursed-dashboard-/cursed-dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run build
