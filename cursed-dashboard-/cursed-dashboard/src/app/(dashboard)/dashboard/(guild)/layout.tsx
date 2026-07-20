@@ -17,7 +17,7 @@ export default async function GuildLayout({
       <div className="relative min-h-screen overflow-x-clip">
         <DashboardAmbient />
         <Sidebar />
-        <div className="relative lg:pl-72">
+        <div className="relative z-10 lg:pl-72">
           <Navbar />
           <main className="mx-auto max-w-[1480px] px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pb-20 lg:pt-8">
             <div className="relative">{children}</div>
