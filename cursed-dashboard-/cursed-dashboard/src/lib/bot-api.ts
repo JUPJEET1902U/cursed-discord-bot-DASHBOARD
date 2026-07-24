@@ -27,6 +27,28 @@ function apiUrl(path: string): URL {
   return new URL(`/api/dashboard/${path.replace(/^\/+/, "")}`, base);
 }
 
+function normalizeOrigin(value: string | undefined): string | null {
+  const text = value?.trim();
+  if (!text) return null;
+
+  try {
+    const candidate = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+    return new URL(candidate).origin;
+  } catch {
+    return null;
+  }
+}
+
+function dashboardOrigin(): string | null {
+  // Vercel supplies a stable production alias without a protocol. Use it
+  // instead of the deployment-specific VERCEL_URL so Railway's exact origin
+  // allow-list continues to work after every redeployment.
+  return (
+    normalizeOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??
+    normalizeOrigin(process.env.DASHBOARD_URL)
+  );
+}
+
 export async function botApiRequest<T>(
   path: string,
   init: Omit<RequestInit, "headers"> & { headers?: HeadersInit } = {}
@@ -35,6 +57,10 @@ export async function botApiRequest<T>(
   const headers = new Headers(init.headers);
   if (!headers.has("Accept")) headers.set("Accept", "application/json");
   headers.set("Authorization", `Bearer ${secret}`);
+
+  const origin = dashboardOrigin();
+  if (origin && !headers.has("Origin")) headers.set("Origin", origin);
+
   let response: Response;
 
   try {
