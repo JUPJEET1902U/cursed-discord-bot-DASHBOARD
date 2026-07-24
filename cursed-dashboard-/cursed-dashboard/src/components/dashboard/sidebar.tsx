@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Route } from "next";
 import { Activity, Sparkles } from "lucide-react";
@@ -9,10 +10,11 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import { CursedLogo } from "@/components/marketing/cursed-logo";
 import { cn } from "@/lib/utils";
 
-/** Premium fixed desktop sidebar rendered from the unchanged navigation list. */
 export function Sidebar() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
+  const { data: session } = useSession();
+  const visibleItems = NAV_ITEMS.filter((item) => !item.ownerOnly || session?.user?.isOwner === true);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-white/[0.07] bg-[#09090e]/82 backdrop-blur-2xl lg:flex">
@@ -36,7 +38,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
@@ -46,9 +48,7 @@ export function Sidebar() {
               prefetch={false}
               className={cn(
                 "group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300",
-                isActive
-                  ? "text-fog"
-                  : "text-ash hover:translate-x-1 hover:bg-white/[0.035] hover:text-fog"
+                isActive ? "text-fog" : "text-ash hover:translate-x-1 hover:bg-white/[0.035] hover:text-fog"
               )}
             >
               {isActive ? (

@@ -21,4 +21,8 @@ jobs:
           cache: npm
           cache-dependency-path: cursed-dashboard-/cursed-dashboard/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - name: Build dashboard
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tail -120
