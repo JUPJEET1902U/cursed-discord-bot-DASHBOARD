@@ -28,6 +28,18 @@ export interface PremiumAccount {
   updatedAt: string | null;
 }
 
+export interface PremiumServerAccount {
+  guildId: string;
+  active: boolean;
+  source: string;
+  note: string;
+  grantedBy: string | null;
+  grantedAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface PremiumRoleOption {
   id: string;
   name: string;
@@ -41,6 +53,9 @@ export interface PremiumGuild {
   iconUrl: string | null;
   premiumRoleId: string | null;
   roles: PremiumRoleOption[];
+  effectivePremium: boolean;
+  premiumSource: "server" | "owner" | null;
+  serverPremium: PremiumServerAccount | null;
 }
 
 export interface PremiumPlanLimits {
@@ -67,6 +82,7 @@ export interface PremiumPlanLimits {
 export interface PremiumOwnerData {
   settings: PremiumPaymentSettings;
   accounts: PremiumAccount[];
+  serverAccounts: PremiumServerAccount[];
   plans: {
     free: PremiumPlanLimits;
     premium: PremiumPlanLimits;
