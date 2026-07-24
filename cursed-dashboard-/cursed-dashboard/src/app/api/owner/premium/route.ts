@@ -50,8 +50,12 @@ export async function POST(request: NextRequest) {
   const access = await requireOwner();
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   try {
-    const body = (await request.json()) as { userId: string; days?: number | null; note?: string };
-    const data = await botApiRequest<PremiumOwnerData>("owner/premium/accounts", {
+    const body = (await request.json()) as
+      | { target?: "user"; userId: string; days?: number | null; note?: string }
+      | { target: "server"; guildId: string; days?: number | null; note?: string };
+    const serverTarget = body.target === "server";
+    const path = serverTarget ? "owner/premium/guilds" : "owner/premium/accounts";
+    const data = await botApiRequest<PremiumOwnerData>(path, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-dashboard-user-id": access.userId },
       body: JSON.stringify(body),
@@ -65,9 +69,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const access = await requireOwner();
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
-  const userId = request.nextUrl.searchParams.get("userId") ?? "";
+  const guildId = request.nextUrl.searchParams.get("guildId");
+  const userId = request.nextUrl.searchParams.get("userId");
+  const path = guildId
+    ? `owner/premium/guilds/${guildId}`
+    : `owner/premium/accounts/${userId ?? ""}`;
   try {
-    const data = await botApiRequest<PremiumOwnerData>(`owner/premium/accounts/${userId}`, {
+    const data = await botApiRequest<PremiumOwnerData>(path, {
       method: "DELETE",
       headers: { "x-dashboard-user-id": access.userId },
     });
