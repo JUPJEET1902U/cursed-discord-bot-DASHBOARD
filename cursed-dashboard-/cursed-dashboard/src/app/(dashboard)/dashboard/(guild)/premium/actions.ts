@@ -65,6 +65,31 @@ export async function revokePremium(formData: FormData) {
   revalidatePath("/dashboard/premium");
 }
 
+export async function grantServerPremium(formData: FormData) {
+  const owner = await ownerId();
+  const rawDays = text(formData, "serverDays");
+  await botApiRequest<PremiumOwnerData>("owner/premium/guilds", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-dashboard-user-id": owner },
+    body: JSON.stringify({
+      guildId: text(formData, "guildId"),
+      days: rawDays ? Number(rawDays) : null,
+      note: text(formData, "serverNote"),
+    }),
+  });
+  revalidatePath("/dashboard/premium");
+}
+
+export async function revokeServerPremium(formData: FormData) {
+  const owner = await ownerId();
+  const guildId = text(formData, "guildId");
+  await botApiRequest<PremiumOwnerData>(`owner/premium/guilds/${guildId}`, {
+    method: "DELETE",
+    headers: { "x-dashboard-user-id": owner },
+  });
+  revalidatePath("/dashboard/premium");
+}
+
 export async function setPremiumRole(formData: FormData) {
   const owner = await ownerId();
   const guildId = text(formData, "guildId");
