@@ -10,6 +10,7 @@ import {
   Command,
   Headphones,
   Crown,
+  CakeSlice,
 } from "lucide-react";
 
 export interface NavItem {
@@ -25,6 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
   { label: "Command Prefix", href: "/dashboard/prefix", icon: Command },
   { label: "Tickets", href: "/dashboard/tickets", icon: Headphones },
+  { label: "Birthdays", href: "/dashboard/birthdays", icon: CakeSlice },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
   { label: "Advanced Moderation", href: "/dashboard/moderation-advanced", icon: ShieldAlert },
   { label: "Server Protection", href: "/dashboard/security", icon: Siren },
