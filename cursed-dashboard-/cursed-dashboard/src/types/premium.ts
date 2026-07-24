@@ -73,3 +73,27 @@ export interface PremiumOwnerData {
   };
   guilds: PremiumGuild[];
 }
+
+/**
+ * Backward-compatible read-only server status used by the existing Settings
+ * editor. The owner billing page uses PremiumOwnerData above.
+ */
+export interface PremiumStatus {
+  active: boolean;
+  plan: string | null;
+  expiresAt: string | null;
+}
+
+export const DEFAULT_PREMIUM_STATUS: PremiumStatus = {
+  active: false,
+  plan: null,
+  expiresAt: null,
+};
+
+export const PREMIUM_FEATURES_PREVIEW: string[] = [
+  "Unlimited AI messages with no reply delay",
+  "Larger AI memory and higher generation limits",
+  "Premium welcome cards and customization",
+  "More ticket dashboard panels and controls",
+  "Advanced analytics and priority support",
+];
