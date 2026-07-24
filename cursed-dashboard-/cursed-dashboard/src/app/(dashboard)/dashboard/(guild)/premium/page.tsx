@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
-import { CreditCard, Crown, Gauge, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { CreditCard, Crown, Gauge, Server, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { auth } from "@/lib/auth";
 import { botApiRequest } from "@/lib/bot-api";
 import type { PremiumOwnerData, PremiumPlanLimits } from "@/types/premium";
 import {
   grantPremium,
+  grantServerPremium,
   revokePremium,
+  revokeServerPremium,
   savePaymentSettings,
   setPremiumRole,
 } from "./actions";
@@ -49,7 +51,7 @@ export default async function PremiumPage() {
     <div>
       <PageHeader
         title="Premium & Billing"
-        description="Owner-only payment links, Premium entitlements, plan limits, and role synchronization."
+        description="Owner-only user Premium, Server Premium, payment links, plan limits, and role synchronization."
       />
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
@@ -90,19 +92,70 @@ export default async function PremiumPage() {
         <section className={cardClass}>
           <div className="flex items-center gap-2">
             <Crown className="h-5 w-5 text-amber-300" />
-            <h2 className="font-display text-xl font-semibold text-fog">Grant Premium</h2>
+            <h2 className="font-display text-xl font-semibold text-fog">Grant user Premium</h2>
           </div>
-          <p className="mt-2 text-sm text-ash">Only this owner screen and verified payment webhooks can create entitlements.</p>
+          <p className="mt-2 text-sm text-ash">User Premium follows one Discord account across every CURSED server.</p>
           <form action={grantPremium} className="mt-5 space-y-4">
             <label className="block text-sm text-ash">Discord user ID<input name="userId" required pattern="[0-9]{17,20}" className={fieldClass} /></label>
             <label className="block text-sm text-ash">Duration in days <span className="text-ash/60">(blank = no expiry)</span><input name="days" type="number" min="1" max="3650" className={fieldClass} /></label>
             <label className="block text-sm text-ash">Internal note<textarea name="note" rows={3} className={fieldClass} /></label>
             <button className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300">
-              <Sparkles className="h-4 w-4" /> Grant Premium
+              <Sparkles className="h-4 w-4" /> Grant user Premium
             </button>
           </form>
         </section>
       </div>
+
+      <section className={`${cardClass} mt-6`}>
+        <div className="flex items-center gap-2">
+          <Server className="h-5 w-5 text-violet-bright" />
+          <h2 className="font-display text-xl font-semibold text-fog">Server Premium</h2>
+        </div>
+        <p className="mt-2 text-sm text-ash">Direct server grants unlock server-wide Premium welcome, ticket, branding, and analytics controls. They do not change individual members&apos; personal AI or image limits.</p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {data.guilds.map((guild) => (
+            <div key={guild.id} className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium text-fog">{guild.name}</div>
+                  <div className="mt-1 font-mono text-[11px] text-ash/70">{guild.id}</div>
+                </div>
+                <span className={guild.effectivePremium
+                  ? "rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-xs font-medium text-amber-200"
+                  : "rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-xs font-medium text-ash"}>
+                  {guild.effectivePremium ? "Premium" : "Free"}
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs leading-relaxed text-ash">
+                {guild.premiumSource === "server"
+                  ? `Direct server grant${guild.serverPremium?.expiresAt ? ` · expires ${guild.serverPremium.expiresAt.slice(0, 10)}` : " · no expiry"}`
+                  : guild.premiumSource === "owner"
+                    ? "Premium through the Discord server owner's user plan"
+                    : "No server Premium entitlement"}
+              </p>
+
+              <form action={grantServerPremium} className="mt-4 space-y-3">
+                <input type="hidden" name="guildId" value={guild.id} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs text-ash">Duration in days <span className="text-ash/60">(blank = no expiry)</span><input name="serverDays" type="number" min="1" max="3650" className={fieldClass} /></label>
+                  <label className="text-xs text-ash">Internal note<input name="serverNote" defaultValue={guild.serverPremium?.note ?? ""} className={fieldClass} /></label>
+                </div>
+                <button className="rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-400">
+                  {guild.serverPremium ? "Renew direct Server Premium" : "Grant direct Server Premium"}
+                </button>
+              </form>
+
+              {guild.serverPremium ? (
+                <form action={revokeServerPremium} className="mt-2">
+                  <input type="hidden" name="guildId" value={guild.id} />
+                  <button className="rounded-lg border border-crimson/30 px-3 py-2 text-xs font-medium text-crimson-bright hover:bg-crimson/10">Revoke direct server grant</button>
+                </form>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className={`${cardClass} mt-6`}>
         <div className="flex items-center gap-2">
@@ -130,7 +183,7 @@ export default async function PremiumPage() {
 
       <section className={`${cardClass} mt-6`}>
         <h2 className="font-display text-xl font-semibold text-fog">Premium badge roles</h2>
-        <p className="mt-2 text-sm text-ash">Selecting a role does not grant Premium by itself. It is synchronized only after an owner grant or verified payment.</p>
+        <p className="mt-2 text-sm text-ash">Selecting a role does not grant Premium by itself. It is synchronized only after a user Premium grant or verified payment.</p>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {data.guilds.map((guild) => (
             <form key={guild.id} action={setPremiumRole} className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
