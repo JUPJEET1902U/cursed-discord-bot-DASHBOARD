@@ -5,6 +5,8 @@ declare module "next-auth" {
     user: {
       /** Discord snowflake ID. */
       id: string;
+      /** True only when the ID is listed in server-side BOT_OWNER_IDS. */
+      isOwner: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -12,12 +14,8 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     discordId?: string;
-    /**
-     * Discord OAuth2 access token. Lives only in the encrypted JWE cookie —
-     * never copied into the client-visible `Session` object (see the
-     * `session` callback in `src/lib/auth/config.ts`). Read it server-side
-     * with `getToken()` from `next-auth/jwt`.
-     */
+    isOwner?: boolean;
+    /** Server-only Discord OAuth token. Never copied to Session. */
     accessToken?: string;
     accessTokenExpires?: number;
   }
