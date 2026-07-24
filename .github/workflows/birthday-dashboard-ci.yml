@@ -1,6 +1,9 @@
 name: Birthday Dashboard CI
 
 on:
+  push:
+    branches:
+      - feat/birthday-dashboard
   pull_request:
     paths:
       - "cursed-dashboard-/cursed-dashboard/src/**/birthdays/**"
