@@ -1,6 +1,7 @@
 "use client";
 
 import type { PointerEvent, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +9,7 @@ interface DashboardCardProps {
   title?: string;
   description?: string;
   action?: ReactNode;
+  icon?: LucideIcon;
   children: ReactNode;
   className?: string;
 }
@@ -20,6 +22,7 @@ export function DashboardCard({
   title,
   description,
   action,
+  icon: Icon,
   children,
   className,
 }: DashboardCardProps) {
@@ -60,17 +63,24 @@ export function DashboardCard({
     >
       <span aria-hidden="true" className="surface-sheen" />
       <div className="relative z-[1]">
-        {title || action ? (
+        {title || action || Icon ? (
           <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              {title ? (
-                <h3 className="font-display text-sm font-semibold tracking-wide text-fog">
-                  {title}
-                </h3>
+            <div className="flex min-w-0 items-start gap-3">
+              {Icon ? (
+                <span className="mt-0.5 rounded-xl border border-violet/20 bg-violet/[0.08] p-2 text-violet-bright">
+                  <Icon className="h-4 w-4" />
+                </span>
               ) : null}
-              {description ? (
-                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ash">{description}</p>
-              ) : null}
+              <div>
+                {title ? (
+                  <h3 className="font-display text-sm font-semibold tracking-wide text-fog">
+                    {title}
+                  </h3>
+                ) : null}
+                {description ? (
+                  <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ash">{description}</p>
+                ) : null}
+              </div>
             </div>
             {action ? <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.025] p-2">{action}</div> : null}
           </div>
