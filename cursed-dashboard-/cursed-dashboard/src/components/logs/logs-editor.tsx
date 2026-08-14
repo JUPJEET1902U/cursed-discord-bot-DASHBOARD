@@ -1,6 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  MessageSquareText,
+  PanelsTopLeft,
+  Radio,
+  ShieldCheck,
+  Smile,
+  Users,
+} from "lucide-react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import {
   EditorActions,
@@ -23,6 +31,15 @@ interface LogsEditorProps {
 }
 
 type FieldErrors = Partial<Record<LogCategoryKey, string>>;
+
+const GROUP_ICONS = {
+  Messages: MessageSquareText,
+  Members: Users,
+  Roles: ShieldCheck,
+  Channels: PanelsTopLeft,
+  Voice: Radio,
+  Emoji: Smile,
+} as const;
 
 /** Client-side mirror of the server's per-category refinement: an enabled
  * category needs a channel selected before it can be saved. */
@@ -70,6 +87,8 @@ export function LogsEditor({
     () => Object.values(config).filter((c) => c.enabled).length,
     [config]
   );
+  const totalCount = Object.keys(config).length;
+  const progress = totalCount ? Math.round((enabledCount / totalCount) * 100) : 0;
 
   function patchCategory(key: LogCategoryKey, next: (typeof config)[typeof key]) {
     setConfig((prev) => ({ ...prev, [key]: next }));
@@ -114,35 +133,72 @@ export function LogsEditor({
 
       <ServerErrorBanner message={serverError} />
 
-      <div className="max-w-3xl space-y-6">
+      <div className="max-w-5xl space-y-6">
         <DashboardCard
-          title="Overview"
-          description={`${enabledCount} of ${Object.keys(config).length} categories enabled.`}
+          title="Logging overview"
+          description="Choose which Discord events CURSED should route to log channels."
+          icon={MessageSquareText}
         >
-          <p className="text-xs text-ash">
-            Turn on any event below and pick a channel for it. The bot reads
-            this configuration on its own schedule — this dashboard never
-            sends log messages itself.
-          </p>
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-4 text-xs">
+                <span className="font-medium text-fog">
+                  {enabledCount} of {totalCount} categories active
+                </span>
+                <span className="text-ash">{progress}% configured</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full border border-white/[0.06] bg-black/20">
+                <div
+                  className="h-full rounded-full bg-violet-bright transition-[width] duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ash">
+                Each active category keeps the same saved channel, embed, color,
+                and bot-filter settings. This refresh only changes how the controls
+                are presented in the dashboard.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-violet/20 bg-violet/[0.05] px-4 py-3">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-violet-bright">
+                Delivery
+              </p>
+              <p className="mt-1 text-xs font-medium text-fog">Discord channels</p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-ash">
+                The dashboard stores settings; CURSED sends the actual log messages.
+              </p>
+            </div>
+          </div>
         </DashboardCard>
 
-        {LOG_CATEGORY_GROUPS.map((group) => (
-          <DashboardCard key={group.title} title={group.title}>
-            <div className="space-y-3">
-              {group.categories.map((meta) => (
-                <LogCategoryRow
-                  key={meta.key}
-                  meta={meta}
-                  config={config[meta.key]}
-                  channels={channels}
-                  channelError={errors[meta.key] ?? serverFieldErrors[meta.key]}
-                  disabled={saving}
-                  onChange={(next) => patchCategory(meta.key, next)}
-                />
-              ))}
-            </div>
-          </DashboardCard>
-        ))}
+        {LOG_CATEGORY_GROUPS.map((group) => {
+          const Icon = GROUP_ICONS[group.title as keyof typeof GROUP_ICONS] ?? MessageSquareText;
+          const groupEnabled = group.categories.filter((meta) => config[meta.key].enabled).length;
+
+          return (
+            <DashboardCard
+              key={group.title}
+              title={group.title}
+              description={`${groupEnabled} of ${group.categories.length} active`}
+              icon={Icon}
+            >
+              <div className="space-y-3">
+                {group.categories.map((meta) => (
+                  <LogCategoryRow
+                    key={meta.key}
+                    meta={meta}
+                    config={config[meta.key]}
+                    channels={channels}
+                    channelError={errors[meta.key] ?? serverFieldErrors[meta.key]}
+                    disabled={saving}
+                    onChange={(next) => patchCategory(meta.key, next)}
+                  />
+                ))}
+              </div>
+            </DashboardCard>
+          );
+        })}
 
         <div className="flex justify-end">
           <EditorActions
