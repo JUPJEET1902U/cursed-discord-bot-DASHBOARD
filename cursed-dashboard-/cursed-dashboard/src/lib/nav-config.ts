@@ -13,6 +13,7 @@ import {
   CakeSlice,
   BadgePlus,
   ScrollText,
+  Paintbrush,
 } from "lucide-react";
 
 export interface NavItem {
@@ -26,6 +27,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { label: "Control Center", href: "/dashboard/settings", icon: SlidersHorizontal },
+  { label: "Bot Appearance", href: "/dashboard/appearance", icon: Paintbrush },
   { label: "Command Prefix", href: "/dashboard/prefix", icon: Command },
   { label: "Tickets", href: "/dashboard/tickets", icon: Headphones },
   { label: "Birthdays", href: "/dashboard/birthdays", icon: CakeSlice },
