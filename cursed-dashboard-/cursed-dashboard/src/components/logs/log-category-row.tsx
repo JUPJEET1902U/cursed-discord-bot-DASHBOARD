@@ -17,11 +17,53 @@ interface LogCategoryRowProps {
   disabled?: boolean;
 }
 
+function categoryAccent(key: LogCategoryMeta["key"]) {
+  if (key.startsWith("message")) {
+    return {
+      dot: "bg-violet-bright",
+      active: "border-violet/30 bg-violet/[0.045]",
+      badge: "border-violet/20 bg-violet/[0.08] text-violet-bright",
+    };
+  }
+  if (key.startsWith("member")) {
+    return {
+      dot: "bg-sky-400",
+      active: "border-sky-400/25 bg-sky-400/[0.035]",
+      badge: "border-sky-400/20 bg-sky-400/[0.07] text-sky-300",
+    };
+  }
+  if (key.startsWith("role")) {
+    return {
+      dot: "bg-amber-400",
+      active: "border-amber-400/25 bg-amber-400/[0.035]",
+      badge: "border-amber-400/20 bg-amber-400/[0.07] text-amber-300",
+    };
+  }
+  if (key.startsWith("channel")) {
+    return {
+      dot: "bg-cyan-400",
+      active: "border-cyan-400/25 bg-cyan-400/[0.035]",
+      badge: "border-cyan-400/20 bg-cyan-400/[0.07] text-cyan-300",
+    };
+  }
+  if (key.startsWith("voice")) {
+    return {
+      dot: "bg-emerald-400",
+      active: "border-emerald-400/25 bg-emerald-400/[0.035]",
+      badge: "border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-300",
+    };
+  }
+  return {
+    dot: "bg-pink-400",
+    active: "border-pink-400/25 bg-pink-400/[0.035]",
+    badge: "border-pink-400/20 bg-pink-400/[0.07] text-pink-300",
+  };
+}
+
 /**
- * One collapsible row per logging category. Always shows the name + enable
- * switch; the channel/embed/color/ignore-bots controls reveal underneath
- * (height + opacity transition) once enabled, so a page with 17 categories
- * doesn't read as a wall of identical open forms.
+ * One collapsible row per logging category. Behavior and stored values are
+ * unchanged; this component only presents the same controls with clearer
+ * CURSED log-status hierarchy.
  */
 export function LogCategoryRow({
   meta,
@@ -32,6 +74,7 @@ export function LogCategoryRow({
   disabled,
 }: LogCategoryRowProps) {
   const fieldId = `log-${meta.key}`;
+  const accent = categoryAccent(meta.key);
 
   function patch(partial: Partial<LogCategoryConfig>) {
     onChange({ ...config, ...partial });
@@ -40,18 +83,38 @@ export function LogCategoryRow({
   return (
     <div
       className={cn(
-        "rounded-xl border transition-colors duration-200",
+        "overflow-hidden rounded-2xl border transition-all duration-200",
         config.enabled
-          ? "border-violet/30 bg-violet/[0.04]"
-          : "border-white/[0.06] bg-white/[0.015]"
+          ? accent.active
+          : "border-white/[0.06] bg-white/[0.015] hover:border-white/[0.10]"
       )}
     >
-      <div className="flex items-center justify-between gap-4 px-4 py-3.5">
-        <div className="min-w-0">
-          <Label htmlFor={`${fieldId}-enabled`} className="text-sm">
-            {meta.label}
-          </Label>
-          <p className="mt-0.5 truncate text-xs text-ash">{meta.description}</p>
+      <div className="flex items-center justify-between gap-4 px-4 py-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_16px_currentColor]", accent.dot)} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor={`${fieldId}-enabled`} className="text-sm font-semibold text-fog">
+                {meta.label}
+              </Label>
+              <span
+                className={cn(
+                  "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]",
+                  config.enabled
+                    ? accent.badge
+                    : "border-white/[0.07] bg-white/[0.025] text-ash"
+                )}
+              >
+                {config.enabled ? "Active" : "Off"}
+              </span>
+              {config.enabled ? (
+                <span className="rounded-full border border-white/[0.07] bg-black/10 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-ash">
+                  {config.embed ? "Embed" : "Plain text"}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-ash">{meta.description}</p>
+          </div>
         </div>
         <Switch
           id={`${fieldId}-enabled`}
@@ -70,63 +133,78 @@ export function LogCategoryRow({
         )}
       >
         <div className="min-h-0">
-          <div className="space-y-4 border-t border-white/[0.06] px-4 py-4">
-            <div>
-              <Label htmlFor={`${fieldId}-channel`}>Log channel</Label>
-              <div className="mt-1.5">
-                <LogChannelSelect
-                  id={`${fieldId}-channel`}
-                  channels={channels}
-                  value={config.channelId}
-                  disabled={disabled}
-                  onChange={(channelId) => patch({ channelId })}
-                />
-              </div>
-              {channelError ? (
-                <p className="mt-1.5 text-xs text-crimson-bright">
-                  {channelError}
-                </p>
-              ) : null}
-              {!channels && !channelError ? (
-                <p className="mt-1.5 text-xs text-ash">
-                  Couldn&apos;t load this server&apos;s channel list — enter
-                  the channel ID directly.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
+          <div className="space-y-4 border-t border-white/[0.06] bg-black/[0.06] px-4 py-4">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)]">
               <div>
-                <Label htmlFor={`${fieldId}-embed`}>Post as embed</Label>
-                <p className="mt-0.5 text-xs text-ash">
-                  Off posts a plain text line instead.
-                </p>
+                <Label htmlFor={`${fieldId}-channel`}>Log channel</Label>
+                <p className="mt-0.5 text-xs text-ash">Where CURSED posts this event.</p>
+                <div className="mt-2">
+                  <LogChannelSelect
+                    id={`${fieldId}-channel`}
+                    channels={channels}
+                    value={config.channelId}
+                    disabled={disabled}
+                    onChange={(channelId) => patch({ channelId })}
+                  />
+                </div>
+                {channelError ? (
+                  <p className="mt-1.5 text-xs text-crimson-bright">
+                    {channelError}
+                  </p>
+                ) : null}
+                {!channels && !channelError ? (
+                  <p className="mt-1.5 text-xs text-ash">
+                    Couldn&apos;t load this server&apos;s channel list — enter
+                    the channel ID directly.
+                  </p>
+                ) : null}
               </div>
-              <Switch
-                id={`${fieldId}-embed`}
-                checked={config.embed}
-                disabled={disabled}
-                onCheckedChange={(checked) => patch({ embed: checked })}
-              />
-            </div>
 
-            <div>
-              <Label htmlFor={`${fieldId}-color`}>Embed color</Label>
-              <div className="mt-1.5 max-w-xs">
-                <ColorPicker
-                  value={config.color}
-                  disabled={disabled || !config.embed}
-                  onChange={(color) => patch({ color })}
-                />
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label htmlFor={`${fieldId}-embed`}>Post as embed</Label>
+                    <p className="mt-0.5 text-xs text-ash">
+                      Uses the richer Discord card layout.
+                    </p>
+                  </div>
+                  <Switch
+                    id={`${fieldId}-embed`}
+                    checked={config.embed}
+                    disabled={disabled}
+                    onCheckedChange={(checked) => patch({ embed: checked })}
+                  />
+                </div>
+
+                <div className="mt-4 border-t border-white/[0.06] pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label htmlFor={`${fieldId}-color`}>Embed accent</Label>
+                      <p className="mt-0.5 text-xs text-ash">Discord side-bar color.</p>
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className="h-5 w-5 rounded-full border border-white/15 shadow-[0_0_18px_rgba(255,255,255,0.08)]"
+                      style={{ backgroundColor: config.color }}
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <ColorPicker
+                      value={config.color}
+                      disabled={disabled || !config.embed}
+                      onChange={(color) => patch({ color })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
             {meta.supportsIgnoreBots ? (
-              <div className="flex items-center justify-between gap-4 border-t border-white/[0.06] pt-4">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.015] px-3.5 py-3">
                 <div>
                   <Label htmlFor={`${fieldId}-ignore-bots`}>Ignore bots</Label>
                   <p className="mt-0.5 text-xs text-ash">
-                    Skip logging this event when a bot account triggers it.
+                    Skip this event when a bot account triggers it.
                   </p>
                 </div>
                 <Switch
