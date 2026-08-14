@@ -1,0 +1,45 @@
+name: Server Appearance Dashboard CI
+
+on:
+  pull_request:
+    paths:
+      - "cursed-dashboard-/cursed-dashboard/src/app/(dashboard)/dashboard/(guild)/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/app/api/guilds/[guildId]/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/components/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/lib/validation/server-appearance.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/types/server-appearance.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/lib/nav-config.ts"
+      - ".github/workflows/server-appearance-dashboard-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cursed-dashboard-/cursed-dashboard/src/app/(dashboard)/dashboard/(guild)/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/app/api/guilds/[guildId]/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/components/appearance/**"
+      - "cursed-dashboard-/cursed-dashboard/src/lib/validation/server-appearance.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/types/server-appearance.ts"
+      - "cursed-dashboard-/cursed-dashboard/src/lib/nav-config.ts"
+      - ".github/workflows/server-appearance-dashboard-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: cursed-dashboard-/cursed-dashboard
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cursed-dashboard-/cursed-dashboard/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Production build
+        run: npm run build
