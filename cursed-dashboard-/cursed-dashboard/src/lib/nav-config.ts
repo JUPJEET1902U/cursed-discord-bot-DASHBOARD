@@ -12,6 +12,7 @@ import {
   Crown,
   CakeSlice,
   BadgePlus,
+  ScrollText,
 } from "lucide-react";
 
 export interface NavItem {
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Tickets", href: "/dashboard/tickets", icon: Headphones },
   { label: "Birthdays", href: "/dashboard/birthdays", icon: CakeSlice },
   { label: "Custom Roles", href: "/dashboard/custom-roles", icon: BadgePlus },
+  { label: "Logs", href: "/dashboard/logs", icon: ScrollText },
   { label: "Moderation", href: "/dashboard/moderation", icon: ShieldCheck },
   { label: "Advanced Moderation", href: "/dashboard/moderation-advanced", icon: ShieldAlert },
   { label: "Server Protection", href: "/dashboard/security", icon: Siren },
