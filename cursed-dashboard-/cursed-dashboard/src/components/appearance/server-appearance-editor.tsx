@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- this editor must preview arbitrary HTTPS and local data: images before save. */
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import {
   CircleUserRound,
   Crown,
@@ -32,8 +33,8 @@ interface ServerAppearanceEditorProps {
   initialData: ServerAppearanceData;
 }
 
-type MediaDraft = string | null | undefined;
 type MediaKind = "avatar" | "banner";
+type MediaDraft = string | null | undefined;
 
 const ACCEPTED_UPLOADS = "image/jpeg,image/png,image/gif";
 
@@ -95,7 +96,6 @@ function drawCover(
     sh = image.naturalWidth / targetRatio;
     sy = (image.naturalHeight - sh) / 2;
   }
-
   context.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
 }
 
@@ -107,20 +107,27 @@ async function optimizeLocalImage(
   if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
     throw new Error("Use a JPG, PNG, or GIF image.");
   }
-
   if (file.size <= maxBytes) return readFileAsDataUrl(file);
   if (file.type === "image/gif") {
-    throw new Error("That animated GIF is too large. Use a smaller GIF or a public HTTPS image URL.");
+    throw new Error(
+      "That animated GIF is too large. Use a smaller GIF or a public HTTPS image URL."
+    );
   }
 
   const image = await loadBrowserImage(file);
-  const baseWidth = kind === "avatar" ? Math.min(512, image.naturalWidth, image.naturalHeight) : Math.min(1024, image.naturalWidth);
-  const baseHeight = kind === "avatar" ? baseWidth : Math.max(1, Math.round(baseWidth / 3.2));
-  const qualities = [0.9, 0.82, 0.72, 0.62, 0.52];
+  const baseWidth =
+    kind === "avatar"
+      ? Math.min(512, image.naturalWidth, image.naturalHeight)
+      : Math.min(1024, image.naturalWidth);
+  const baseHeight =
+    kind === "avatar" ? baseWidth : Math.max(1, Math.round(baseWidth / 3.2));
 
   for (const scale of [1, 0.82, 0.68]) {
     const width = Math.max(96, Math.round(baseWidth * scale));
-    const height = Math.max(kind === "avatar" ? 96 : 48, Math.round(baseHeight * scale));
+    const height = Math.max(
+      kind === "avatar" ? 96 : 48,
+      Math.round(baseHeight * scale)
+    );
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -131,13 +138,15 @@ async function optimizeLocalImage(
     context.fillRect(0, 0, width, height);
     drawCover(context, image, width, height);
 
-    for (const quality of qualities) {
+    for (const quality of [0.9, 0.82, 0.72, 0.62, 0.52]) {
       const blob = await canvasBlob(canvas, quality);
       if (blob.size <= maxBytes) return readFileAsDataUrl(blob);
     }
   }
 
-  throw new Error("That image is still too large after optimization. Use a smaller file or a public HTTPS URL.");
+  throw new Error(
+    "That image is still too large after optimization. Use a smaller file or a public HTTPS URL."
+  );
 }
 
 function PremiumBadge() {
@@ -145,6 +154,68 @@ function PremiumBadge() {
     <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/[0.08] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-300">
       <Crown className="h-3 w-3" /> Premium
     </span>
+  );
+}
+
+function CurrentMedia({
+  kind,
+  url,
+}: {
+  kind: MediaKind;
+  url: string | null;
+}) {
+  if (kind === "avatar") {
+    return (
+      <div className="flex min-h-28 items-center justify-center">
+        {url ? (
+          <img
+            src={url}
+            alt="Current CURSED server avatar"
+            className="h-24 w-24 rounded-full border-2 border-violet/30 object-cover shadow-[0_0_28px_rgba(124,58,237,0.18)]"
+          />
+        ) : (
+          <div className="flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-white/10 bg-white/[0.03] text-ash">
+            <CircleUserRound className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return url ? (
+    <div className="aspect-[16/5] overflow-hidden rounded-xl border border-white/[0.07] bg-black/30">
+      <img src={url} alt="Current CURSED server banner" className="h-full w-full object-cover" />
+    </div>
+  ) : (
+    <div className="flex aspect-[16/5] items-center justify-center rounded-xl border border-dashed border-white/10 bg-gradient-to-br from-violet/[0.08] via-black/20 to-crimson/[0.06] text-xs text-ash">
+      No custom or global banner is currently available.
+    </div>
+  );
+}
+
+function PendingMedia({ kind, url }: { kind: MediaKind; url: string | null }) {
+  if (kind === "avatar") {
+    return (
+      <div className="mb-3 flex justify-center rounded-lg border border-white/[0.06] bg-black/15 p-3">
+        {url ? (
+          <img src={url} alt="Pending avatar preview" className="h-20 w-20 rounded-full object-cover" />
+        ) : (
+          <span className="py-6 text-xs text-ash">Reset to global avatar</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3 aspect-[16/5] overflow-hidden rounded-lg border border-white/[0.06] bg-black/20">
+      {url ? (
+        <img src={url} alt="Pending banner preview" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-xs text-ash">
+          Reset to global banner
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -174,21 +245,16 @@ function MediaEditor({
   saving: boolean;
   uploadLabel: string | null;
   urlValue: string;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   onUrlChange: (value: string) => void;
   onUpload: (file: File) => void;
   onReset: () => void;
 }) {
-  const isAvatar = kind === "avatar";
-  const Icon = isAvatar ? CircleUserRound : ImageIcon;
+  const Icon = kind === "avatar" ? CircleUserRound : ImageIcon;
+  const changed = previewUrl !== currentUrl;
 
   return (
-    <DashboardCard
-      title={title}
-      description={description}
-      icon={Icon}
-      action={<PremiumBadge />}
-    >
+    <DashboardCard title={title} description={description} icon={Icon} action={<PremiumBadge />}>
       <div className="rounded-xl border border-white/[0.06] bg-black/15 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-ash">
@@ -198,54 +264,23 @@ function MediaEditor({
             {customActive ? "Server-specific" : "Global CURSED profile"}
           </span>
         </div>
-
-        {isAvatar ? (
-          <div className="flex min-h-28 items-center justify-center">
-            {currentUrl ? (
-              <img
-                src={currentUrl}
-                alt="Current CURSED server avatar"
-                className="h-24 w-24 rounded-full border-2 border-violet/30 object-cover shadow-[0_0_28px_rgba(124,58,237,0.18)]"
-              />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-white/10 bg-white/[0.03] text-ash">
-                <CircleUserRound className="h-8 w-8" />
-              </div>
-            )}
-          </div>
-        ) : currentUrl ? (
-          <div className="aspect-[16/5] overflow-hidden rounded-xl border border-white/[0.07] bg-black/30">
-            <img src={currentUrl} alt="Current CURSED server banner" className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <div className="flex aspect-[16/5] items-center justify-center rounded-xl border border-dashed border-white/10 bg-gradient-to-br from-violet/[0.08] via-black/20 to-crimson/[0.06] text-xs text-ash">
-            No custom or global banner is currently available.
-          </div>
-        )}
+        <CurrentMedia kind={kind} url={currentUrl} />
       </div>
 
       <div className="mt-4 rounded-xl border border-violet/15 bg-violet/[0.025] p-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <Label htmlFor={`${kind}-url`}>Update media</Label>
-          {previewUrl !== currentUrl ? (
-            <span className="text-[10px] font-medium text-violet-bright">Previewing unsaved change</span>
+          {changed ? (
+            <span className="text-[10px] font-medium text-violet-bright">
+              Previewing unsaved change
+            </span>
           ) : null}
         </div>
         <p className="mb-3 text-[11px] leading-relaxed text-ash">
           Enter a public HTTPS image URL or upload a local JPG, PNG, or GIF. Local files are optimized before upload.
         </p>
 
-        {previewUrl !== currentUrl ? (
-          isAvatar ? (
-            <div className="mb-3 flex justify-center rounded-lg border border-white/[0.06] bg-black/15 p-3">
-              {previewUrl ? <img src={previewUrl} alt="Pending avatar preview" className="h-20 w-20 rounded-full object-cover" /> : <span className="py-6 text-xs text-ash">Reset to global avatar</span>}
-            </div>
-          ) : (
-            <div className="mb-3 aspect-[16/5] overflow-hidden rounded-lg border border-white/[0.06] bg-black/20">
-              {previewUrl ? <img src={previewUrl} alt="Pending banner preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-ash">Reset to global banner</div>}
-            </div>
-          )
-        ) : null}
+        {changed ? <PendingMedia kind={kind} url={previewUrl} /> : null}
 
         <div className="flex gap-2">
           <Input
@@ -273,18 +308,25 @@ function MediaEditor({
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={!premium || saving}
-            aria-label={`Upload ${kind}`}
           >
-            <Upload className="h-4 w-4" />
-            Upload
+            <Upload className="h-4 w-4" /> Upload
           </Button>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="truncate text-[10px] text-ash">
-            {uploadLabel ?? (customActive ? "A server-specific image is active." : "Using CURSED's global profile image.")}
+            {uploadLabel ??
+              (customActive
+                ? "A server-specific image is active."
+                : "Using the global CURSED profile image.")}
           </span>
-          <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={!premium || saving}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            disabled={!premium || saving}
+          >
             <RotateCcw className="h-3.5 w-3.5" /> Reset {kind}
           </Button>
         </div>
@@ -300,8 +342,8 @@ export function ServerAppearanceEditor({
 }: ServerAppearanceEditorProps) {
   const { toast } = useToast();
   const [data, setData] = useState(initialData);
-  const [avatarDraft, setAvatarDraft] = useState<MediaDraft>(undefined);
-  const [bannerDraft, setBannerDraft] = useState<MediaDraft>(undefined);
+  const [avatarDraft, setAvatarDraft] = useState<MediaDraft>();
+  const [bannerDraft, setBannerDraft] = useState<MediaDraft>();
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [avatarUploadLabel, setAvatarUploadLabel] = useState<string | null>(null);
@@ -315,15 +357,23 @@ export function ServerAppearanceEditor({
 
   const savedBio = data.profile.bio ?? "";
   const normalizedBio = bio.trim();
-  const dirty = avatarDraft !== undefined || bannerDraft !== undefined || normalizedBio !== savedBio;
+  const dirty =
+    avatarDraft !== undefined ||
+    bannerDraft !== undefined ||
+    normalizedBio !== savedBio;
   const bioError = bio.length > data.limits.bioMaxLength;
   const mediaError = [avatarDraft, bannerDraft].some(
-    (value) => typeof value === "string" && !value.startsWith("data:image/") && !value.startsWith("https://")
+    (value) =>
+      typeof value === "string" &&
+      !value.startsWith("data:image/") &&
+      !value.startsWith("https://")
   );
   const hasErrors = bioError || mediaError;
 
   const avatarPreview = useMemo(() => {
-    if (avatarDraft === null) return data.profile.globalAvatarUrl ?? data.profile.avatarUrl;
+    if (avatarDraft === null) {
+      return data.profile.globalAvatarUrl ?? data.profile.avatarUrl;
+    }
     return avatarDraft ?? data.profile.avatarUrl;
   }, [avatarDraft, data.profile.avatarUrl, data.profile.globalAvatarUrl]);
 
@@ -332,14 +382,14 @@ export function ServerAppearanceEditor({
     return bannerDraft ?? data.profile.bannerUrl;
   }, [bannerDraft, data.profile.bannerUrl, data.profile.globalBannerUrl]);
 
-  function resetDrafts(nextData = data) {
+  function resetDrafts(next = data) {
     setAvatarDraft(undefined);
     setBannerDraft(undefined);
     setAvatarUrl("");
     setBannerUrl("");
     setAvatarUploadLabel(null);
     setBannerUploadLabel(null);
-    setBio(nextData.profile.bio ?? "");
+    setBio(next.profile.bio ?? "");
     setServerError(null);
   }
 
@@ -347,7 +397,11 @@ export function ServerAppearanceEditor({
     if (!data.premium) return;
     setServerError(null);
     try {
-      const optimized = await optimizeLocalImage(file, kind, data.limits.localUploadBytes);
+      const optimized = await optimizeLocalImage(
+        file,
+        kind,
+        data.limits.localUploadBytes
+      );
       if (kind === "avatar") {
         setAvatarDraft(optimized);
         setAvatarUrl("");
@@ -358,7 +412,8 @@ export function ServerAppearanceEditor({
         setBannerUploadLabel(`${file.name} ready to save`);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not prepare that image.";
+      const message =
+        error instanceof Error ? error.message : "Could not prepare that image.";
       setServerError(message);
       toast({ title: "Image not ready", description: message, variant: "error" });
     }
@@ -368,7 +423,8 @@ export function ServerAppearanceEditor({
     if (!data.premium) {
       toast({
         title: "Premium required",
-        description: "Per-server CURSED appearance is available only while this server has Premium.",
+        description:
+          "Per-server CURSED appearance is available only while this server has Premium.",
         variant: "error",
       });
       return;
@@ -392,7 +448,8 @@ export function ServerAppearanceEditor({
         | (ServerAppearanceData & { error?: string })
         | null;
       if (!response.ok || !result) {
-        const message = result?.error ?? "Couldn't save CURSED server appearance.";
+        const message =
+          result?.error ?? "Could not save CURSED server appearance.";
         setServerError(message);
         toast({ title: "Save failed", description: message, variant: "error" });
         return;
@@ -406,7 +463,7 @@ export function ServerAppearanceEditor({
         variant: "success",
       });
     } catch {
-      const message = "Network error — couldn't reach the server.";
+      const message = "Network error — could not reach the server.";
       setServerError(message);
       toast({ title: "Save failed", description: message, variant: "error" });
     } finally {
@@ -416,30 +473,41 @@ export function ServerAppearanceEditor({
 
   async function factoryReset() {
     if (!data.profile.hasCustomAppearance || resetting) return;
-    if (!window.confirm("Reset CURSED's server avatar, banner, and bio back to the global profile?")) return;
+    if (
+      !window.confirm(
+        "Reset the CURSED server avatar, banner, and bio back to the global profile?"
+      )
+    ) {
+      return;
+    }
 
     setResetting(true);
     setServerError(null);
     try {
-      const response = await fetch(`/api/guilds/${guildId}/appearance`, { method: "DELETE" });
+      const response = await fetch(`/api/guilds/${guildId}/appearance`, {
+        method: "DELETE",
+      });
       const result = (await response.json().catch(() => null)) as
         | (ServerAppearanceData & { error?: string })
         | null;
       if (!response.ok || !result) {
-        const message = result?.error ?? "Couldn't reset CURSED server appearance.";
+        const message =
+          result?.error ?? "Could not reset CURSED server appearance.";
         setServerError(message);
         toast({ title: "Reset failed", description: message, variant: "error" });
         return;
       }
+
       setData(result);
       resetDrafts(result);
       toast({
         title: "Appearance reset",
-        description: "CURSED is using its global/default profile in this server again.",
+        description:
+          "CURSED is using its global/default profile in this server again.",
         variant: "success",
       });
     } catch {
-      const message = "Network error — couldn't reach the server.";
+      const message = "Network error — could not reach the server.";
       setServerError(message);
       toast({ title: "Reset failed", description: message, variant: "error" });
     } finally {
@@ -467,15 +535,21 @@ export function ServerAppearanceEditor({
           }`}
         >
           <div className="flex items-start gap-3">
-            <Crown className={`mt-0.5 h-4 w-4 shrink-0 ${data.premium ? "text-amber-300" : "text-violet-bright"}`} />
+            <Crown
+              className={`mt-0.5 h-4 w-4 shrink-0 ${
+                data.premium ? "text-amber-300" : "text-violet-bright"
+              }`}
+            />
             <div>
               <p className="text-sm font-medium text-fog">
-                {data.premium ? "Premium server appearance is active" : "Premium required to customize CURSED"}
+                {data.premium
+                  ? "Premium server appearance is active"
+                  : "Premium required to customize CURSED"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-ash">
                 {data.premium
-                  ? `Changes on this page affect CURSED only in ${guildName}; the bot's global profile and other servers stay unchanged.`
-                  : "Avatar, banner, and bio editing is locked until this server has Premium. Factory Reset remains available for any existing custom appearance."}
+                  ? `Changes on this page affect CURSED only in ${guildName}; the global profile and other servers stay unchanged.`
+                  : "Avatar, banner, and bio editing is locked until this server has Premium. Factory Reset remains available for an existing custom appearance."}
               </p>
             </div>
           </div>
@@ -538,7 +612,9 @@ export function ServerAppearanceEditor({
           action={<PremiumBadge />}
         >
           <div className="rounded-xl border border-white/[0.06] bg-black/15 p-4">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-ash">Currently active</p>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-ash">
+              Currently active
+            </p>
             <div className="mt-3 min-h-14 rounded-lg border-l-2 border-amber-400/60 bg-black/20 px-4 py-3 text-sm text-fog">
               {data.profile.bio || "No server-specific bio is active."}
             </div>
@@ -547,7 +623,11 @@ export function ServerAppearanceEditor({
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between gap-3">
               <Label htmlFor="server-bio">Update biography</Label>
-              <span className={`text-[10px] ${bioError ? "text-crimson-bright" : "text-ash"}`}>
+              <span
+                className={`text-[10px] ${
+                  bioError ? "text-crimson-bright" : "text-ash"
+                }`}
+              >
                 {bio.length}/{data.limits.bioMaxLength}
               </span>
             </div>
@@ -565,7 +645,9 @@ export function ServerAppearanceEditor({
                 Bio must be {data.limits.bioMaxLength} characters or fewer.
               </p>
             ) : (
-              <p className="mt-2 text-xs text-ash">Leave this empty and save to reset only the server bio.</p>
+              <p className="mt-2 text-xs text-ash">
+                Leave this empty and save to reset only the server bio.
+              </p>
             )}
           </div>
         </DashboardCard>
@@ -587,7 +669,7 @@ export function ServerAppearanceEditor({
                 Factory Reset Appearance
               </h3>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ash">
-                Revert all per-server appearance customizations to CURSED's global defaults. This reset stays available even if Premium expires.
+                Revert all per-server appearance customizations to the global CURSED defaults. This reset stays available even if Premium expires.
               </p>
             </div>
             <Button
@@ -597,7 +679,11 @@ export function ServerAppearanceEditor({
               disabled={!data.profile.hasCustomAppearance || resetting || saving}
               className="border-crimson/35 text-crimson-bright hover:border-crimson/60 hover:bg-crimson/[0.08]"
             >
-              {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {resetting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4" />
+              )}
               Reset appearance
             </Button>
           </div>
