@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   Loader2,
   LockKeyhole,
   Save,
+  ScrollText,
   ShieldCheck,
   UserRoundCheck,
 } from "lucide-react";
@@ -39,9 +41,6 @@ interface Props {
   guildId: string;
   initialData: AdvancedModerationData;
 }
-
-const selectClass =
-  "h-10 w-full rounded-lg border border-white/10 bg-steel/60 px-3.5 text-sm text-fog outline-none focus:border-violet/60 focus:ring-1 focus:ring-violet/60 disabled:opacity-50";
 
 const commandLabels: Array<[keyof AdvancedCommandToggles, string, string]> = [
   ["purge", "Purge", "Filtered deletion with a configurable maximum."],
@@ -121,11 +120,6 @@ export function ModerationAdvancedEditor({ guildId, initialData }: Props) {
 
   function patch(value: Partial<AdvancedModerationConfig>) {
     setConfig((current) => ({ ...current, ...value }));
-    setSuccess(null);
-  }
-
-  function patchLogging(value: Partial<AdvancedModerationConfig["logging"]>) {
-    setConfig((current) => ({ ...current, logging: { ...current.logging, ...value } }));
     setSuccess(null);
   }
 
@@ -355,30 +349,25 @@ export function ModerationAdvancedEditor({ guildId, initialData }: Props) {
           </div>
         </DashboardCard>
 
-        <DashboardCard title="Detailed logging" description="Privacy-aware message and member change logs.">
-          <div className="grid gap-6 lg:grid-cols-2">
+        <DashboardCard
+          title="Detailed logging"
+          description="Message, member, role, channel, voice, server, moderation, security, and ticket logging now live in one dedicated control center."
+          action={<ScrollText className="h-5 w-5 text-violet-bright" />}
+        >
+          <div className="flex flex-col gap-4 rounded-xl border border-violet/20 bg-violet/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Toggle id="delete-logs" label="Deleted message logs" description="Log message metadata and optionally content." checked={config.logging.messageDeleteEnabled} onChange={(value) => patchLogging({ messageDeleteEnabled: value })} />
-              <Toggle id="edit-logs" label="Edited message logs" description="Log before and after content with a jump link." checked={config.logging.messageEditEnabled} onChange={(value) => patchLogging({ messageEditEnabled: value })} />
-              <Toggle id="member-logs" label="Member update logs" description="Log nickname and role changes." checked={config.logging.memberUpdateEnabled} onChange={(value) => patchLogging({ memberUpdateEnabled: value })} />
-              <Toggle id="deleted-content" label="Store deleted message content" description="Leave disabled for stronger privacy." checked={config.logging.storeDeletedMessageContent} onChange={(value) => patchLogging({ storeDeletedMessageContent: value })} />
+              <p className="text-sm font-semibold text-fog">Logging moved to Logs</p>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ash">
+                Use the Logs page to enable each event, select its destination channel, control embed formatting, and choose whether deleted message content is included.
+              </p>
             </div>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="message-log-channel">Message log channel</Label>
-                <select id="message-log-channel" className={`${selectClass} mt-1.5`} value={config.logging.messageLogChannelId ?? "none"} onChange={(event) => patchLogging({ messageLogChannelId: event.target.value === "none" ? null : event.target.value })}>
-                  <option value="none">No message log channel</option>
-                  {initialData.channels.map((channel) => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="member-log-channel">Member log channel</Label>
-                <select id="member-log-channel" className={`${selectClass} mt-1.5`} value={config.logging.memberLogChannelId ?? "none"} onChange={(event) => patchLogging({ memberLogChannelId: event.target.value === "none" ? null : event.target.value })}>
-                  <option value="none">No member log channel</option>
-                  {initialData.channels.map((channel) => <option key={channel.id} value={channel.id}>#{channel.name}</option>)}
-                </select>
-              </div>
-            </div>
+            <Link
+              href="/dashboard/logs"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-violet/30 bg-violet/[0.10] px-4 text-sm font-semibold text-violet-bright transition hover:bg-violet/[0.16]"
+            >
+              <ScrollText className="h-4 w-4" />
+              Open Logs
+            </Link>
           </div>
         </DashboardCard>
 
