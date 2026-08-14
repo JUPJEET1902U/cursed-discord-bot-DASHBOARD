@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import {
+  Gavel,
   MessageSquareText,
   PanelsTopLeft,
   Radio,
+  ServerCog,
+  ShieldAlert,
   ShieldCheck,
-  Smile,
+  TicketCheck,
   Users,
 } from "lucide-react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
@@ -38,11 +41,12 @@ const GROUP_ICONS = {
   Roles: ShieldCheck,
   Channels: PanelsTopLeft,
   Voice: Radio,
-  Emoji: Smile,
+  Server: ServerCog,
+  Moderation: Gavel,
+  Security: ShieldAlert,
+  Tickets: TicketCheck,
 } as const;
 
-/** Client-side mirror of the server's per-category refinement: an enabled
- * category needs a channel selected before it can be saved. */
 function validate(config: LogsConfig): FieldErrors {
   const errors: FieldErrors = {};
   for (const key of Object.keys(config) as LogCategoryKey[]) {
@@ -80,11 +84,11 @@ export function LogsEditor({
     genericErrorMessage: "Couldn't save logging settings.",
     invalidFieldsTitle: "Fix the highlighted categories",
     invalidFieldsDescription:
-      "Some categories need a log channel before they can be enabled.",
+      "Every enabled log category needs a Discord destination channel.",
   });
 
   const enabledCount = useMemo(
-    () => Object.values(config).filter((c) => c.enabled).length,
+    () => Object.values(config).filter((category) => category.enabled).length,
     [config]
   );
   const totalCount = Object.keys(config).length;
@@ -105,12 +109,12 @@ export function LogsEditor({
     const { ok, data } = await saveConfig();
     if (!ok && data?.fieldErrors) {
       const flattened: FieldErrors = {};
-      for (const [key, msgs] of Object.entries(
+      for (const [key, messages] of Object.entries(
         data.fieldErrors as Record<string, unknown>
       )) {
-        flattened[key as LogCategoryKey] = Array.isArray(msgs)
-          ? msgs[0]
-          : String(msgs);
+        flattened[key as LogCategoryKey] = Array.isArray(messages)
+          ? String(messages[0])
+          : String(messages);
       }
       setServerFieldErrors(flattened);
     }
@@ -135,17 +139,17 @@ export function LogsEditor({
 
       <div className="max-w-5xl space-y-6">
         <DashboardCard
-          title="Logging overview"
-          description="Choose which Discord events CURSED should route to log channels."
+          title="Logging control center"
+          description="Enable exactly what CURSED should log and choose the Discord channel for every event type."
           icon={MessageSquareText}
         >
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-end">
             <div>
               <div className="mb-2 flex items-center justify-between gap-4 text-xs">
                 <span className="font-medium text-fog">
-                  {enabledCount} of {totalCount} categories active
+                  {enabledCount} of {totalCount} log types active
                 </span>
-                <span className="text-ash">{progress}% configured</span>
+                <span className="text-ash">{progress}% enabled</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full border border-white/[0.06] bg-black/20">
                 <div
@@ -154,9 +158,9 @@ export function LogsEditor({
                 />
               </div>
               <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ash">
-                Each active category keeps the same saved channel, embed, color,
-                and bot-filter settings. This refresh only changes how the controls
-                are presented in the dashboard.
+                Switch on only the events you want, select their destination channels,
+                then save. CURSED reads these settings from the same live guild config used
+                by the rest of the bot.
               </p>
             </div>
 
@@ -164,9 +168,9 @@ export function LogsEditor({
               <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-violet-bright">
                 Delivery
               </p>
-              <p className="mt-1 text-xs font-medium text-fog">Discord channels</p>
+              <p className="mt-1 text-xs font-medium text-fog">Per-event channels</p>
               <p className="mt-0.5 text-[10px] leading-relaxed text-ash">
-                The dashboard stores settings; CURSED sends the actual log messages.
+                Different log types can go to different Discord channels.
               </p>
             </div>
           </div>
